@@ -1,0 +1,2016 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Slop Shop — 6-Member Venn-ish Overlap Mapper (v4)</title>
+  <style>
+    :root{
+      --bg:#0b0d10;
+      --panel:#0f141a;
+      --panel2:#0c1016;
+      --text:#e7edf5;
+      --muted:#9aa8b7;
+      --border:rgba(255,255,255,.10);
+      --border2:rgba(255,255,255,.18);
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --radius: 14px;
+      --accent:#b7c7ff;
+    }
+    body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden;}
+    .app{position:fixed; inset:0;display:grid;grid-template-columns: 380px 1fr 380px;gap:10px;padding:10px;box-sizing:border-box;}
+    .panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+    .panelHeader{padding:12px 12px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none;}
+    .panelHeader .title{font-weight:700;letter-spacing:.2px;font-size:14px;}
+    .panelHeader .sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+    .panelBody{padding:12px;overflow:auto;min-height:0;}
+    .btnRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    button{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:8px 10px;font-size:12px;font-family:var(--font);cursor:pointer;transition:transform .05s ease, background .12s ease, border-color .12s ease, opacity .12s ease;user-select:none;}
+    button:hover{background:rgba(255,255,255,.09);border-color:var(--border2);}
+    button:active{transform:translateY(1px);}
+    button.primary{background:rgba(183,199,255,.16);border-color:rgba(183,199,255,.28);}
+    button.ghost{background:rgba(255,255,255,.03);}
+    button.danger{background:rgba(255,120,120,.12);border-color:rgba(255,120,120,.22);}
+    button:disabled{opacity:.45;cursor:not-allowed;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;margin-bottom:6px;font-family:var(--mono);}
+    .dot{width:10px;height:10px;border-radius:999px;display:inline-block;border:1px solid rgba(255,255,255,.25);box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);flex:0 0 auto;}
+    textarea{width:100%;min-height:96px;resize:vertical;box-sizing:border-box;padding:10px 10px;border-radius:12px;border:1px solid var(--border);background:rgba(0,0,0,.22);color:var(--text);outline:none;font-family:var(--mono);font-size:12px;line-height:1.25rem;}
+    textarea:focus{border-color:rgba(183,199,255,.28);}
+    .hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.25rem;}
+    .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-family:var(--mono);font-size:11px;color:var(--muted);margin:8px 0 0;}
+    .kv b{color:var(--text);font-weight:600;}
+    .sliderRow{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px;}
+    .slider{padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.04);}
+    .sliderTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:12px;color:var(--muted);font-family:var(--mono);}
+    input[type="range"]{width:100%;accent-color:var(--accent);}
+    select{padding:10px;border-radius:12px;border:1px solid var(--border);background:rgba(0,0,0,.22);color:var(--text);font-family:var(--mono);font-size:12px;width:100%;outline:none;}
+    .stage{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;position:relative;min-height:0;}
+    canvas{display:block;width:100%;height:100%;}
+    .floating{position:absolute;left:18px;top:18px;width:460px;max-width:min(560px,92vw);border-radius:16px;background:linear-gradient(180deg,rgba(15,20,26,.92),rgba(12,16,22,.88));border:1px solid var(--border);box-shadow:0 24px 80px rgba(0,0,0,.55);backdrop-filter:blur(10px);overflow:hidden;z-index:10;}
+    .floating.hidden{display:none;}
+    .floatingHeader{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;user-select:none;cursor:grab;gap:10px;}
+    .floatingHeader:active{cursor:grabbing;}
+    .floatingHeader .name{font-size:13px;font-weight:700;letter-spacing:.2px;}
+    .floatingHeader .mini{font-size:11px;color:var(--muted);font-family:var(--mono);}
+    .floatingBody{padding:10px 12px 12px;max-height:min(70vh,760px);overflow:auto;}
+    .pillRow{display:flex;gap:8px;flex-wrap:wrap;}
+    .pill{border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.04);padding:6px 10px;font-size:12px;cursor:pointer;user-select:none;white-space:nowrap;}
+    .pill.active{background:rgba(183,199,255,.16);border-color:rgba(183,199,255,.28);}
+    .list{border:1px solid var(--border);border-radius:12px;background:rgba(0,0,0,.18);padding:10px;margin-top:10px;}
+    .list h4{margin:0 0 8px 0;font-size:12px;color:var(--muted);font-family:var(--mono);font-weight:600;}
+    .tokens{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+    .token{font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.05);user-select:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .12s ease,border-color .12s ease,transform .05s ease;}
+    .token:hover{background:rgba(255,255,255,.08);border-color:var(--border2);}
+    .token:active{transform:translateY(1px);}
+    .token.selected{background:rgba(183,199,255,.16);border-color:rgba(183,199,255,.32);}
+    .tagdot{width:8px;height:8px;border-radius:999px;display:inline-block;border:1px solid rgba(255,255,255,.24);flex:0 0 auto;}
+    .small{font-size:11px;color:var(--muted);line-height:1.25rem;}
+    .bucketItem{padding:10px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);margin-bottom:10px;}
+    .bucketItem .head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
+    .badge{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--border);background:rgba(0,0,0,.18);padding:4px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;}
+    .foot{padding:10px 12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted);font-family:var(--mono);}
+
+    /* Zen mode (diagram-only) */
+    body.zen .app{grid-template-columns: 1fr; padding:0; gap:0;}
+    body.zen .panel{display:none;}
+    body.zen .stage{border-radius:0;border:0;box-shadow:none;}
+    body.zen .floating{display:none;}
+    .zenToolbar{
+      position:absolute; right:14px; top:14px; z-index:20;
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      background:linear-gradient(180deg,rgba(15,20,26,.86),rgba(12,16,22,.80));
+      border:1px solid var(--border); border-radius:14px; padding:8px;
+      box-shadow:0 18px 60px rgba(0,0,0,.35); backdrop-filter:blur(10px);
+    }
+    .zenToolbar.hidden{display:none;}
+    .zenToolbar .hintKey{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:6px;}
+
+    body.light{--bg:#f7f8fb;--panel:#ffffff;--panel2:#f2f4f8;--text:#0c1117;--muted:#4b5a6b;--border:rgba(0,0,0,.10);--border2:rgba(0,0,0,.16);--shadow:0 18px 60px rgba(0,0,0,.10);}
+    body.light textarea, body.light select{background:rgba(255,255,255,.85);color:var(--text);}
+    body.light .floating{background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(245,247,251,.88));backdrop-filter:blur(10px);}
+    body.light .list{background:rgba(255,255,255,.75);}
+    body.light .zenToolbar{background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(245,247,251,.88));}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="panel">
+    <div class="panelHeader">
+      <div>
+        <div class="title">Data Entry</div>
+        <div class="sub">comma/newline tokens • #tags supported • exact overlap buckets</div>
+      </div>
+      <div class="btnRow">
+        <button class="primary" id="smartPresetBtn">Smart presets</button>
+        <button id="randomizeColorsBtn">Randomize colors</button>
+        <button id="recenterBtn">Recenter</button>
+        <button id="zenBtn" class="ghost" title="Diagram-only (press M to restore)">Venn only</button>
+      </div>
+    </div>
+
+    <div class="panelBody">
+      <div class="grid2" id="inputsGrid"></div>
+
+      <div style="height:10px"></div>
+
+      <div class="btnRow">
+        <button id="exportPngBtn">Download PNG</button>
+        <button id="saveJsonBtn">Save JSON</button>
+        <button id="loadJsonBtn">Load JSON</button>
+        <input id="loadJsonFile" type="file" accept="application/json" style="display:none" />
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="list" style="margin-top:0">
+        <h4>Background</h4>
+        <select id="bgMode">
+          <option value="dark">Dark</option>
+          <option value="light">White</option>
+          <option value="transparent">Transparent (export-ready)</option>
+        </select>
+        <div class="small" style="margin-top:8px">Export respects this: Transparent gives a usable PNG asset.</div>
+      </div>
+
+      <div class="sliderRow">
+        <div class="slider">
+          <div class="sliderTop"><span>Petal spacing</span><span class="small" id="sSpacingVal"></span></div>
+          <input id="sSpacing" type="range" min="140" max="360" value="250" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Ellipse size</span><span class="small" id="sSizeVal"></span></div>
+          <input id="sSize" type="range" min="170" max="420" value="300" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Overlap pull (to center)</span><span class="small" id="sPullVal"></span></div>
+          <input id="sPull" type="range" min="0" max="100" value="60" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Ellipse opacity</span><span class="small" id="sOpacityVal"></span></div>
+          <input id="sOpacity" type="range" min="5" max="70" value="18" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Text size</span><span class="small" id="sTextVal"></span></div>
+          <input id="sText" type="range" min="10" max="18" value="12" />
+        </div>
+
+        <div class="slider">
+          <div class="sliderTop"><span>Max labels</span><span class="small" id="sMaxLabelsVal"></span></div>
+          <input id="sMaxLabels" type="range" min="30" max="420" value="180" />
+        </div>
+        <div class="btnRow" style="margin-top:6px">
+          <button id="toggleCullBtn" class="primary">Cull labels: ON</button>
+          <button id="toggleFocusBtn" class="ghost">Focus selection: OFF</button>
+        </div>
+
+      </div>
+
+      <div class="hint">
+        Tag syntax: prefix tokens with <b>#tag</b> or <b>#tag:</b> like “#ai lora training”. Tags show as dots on chips + help you spot categories.
+      </div>
+
+      <div class="kv">
+        <div>Venn only</div><b>hit “Venn only” or press V • press M to restore menus</b>
+        <div>Hide analysis</div><b>double-click the analysis box</b>
+        <div>Click words</div><b>click any word on the diagram to inspect + suggest adds</b>
+        <div>Click region</div><b>click inside overlap to inspect bucket</b>
+        <div>Compare</div><b>click member labels A then B</b>
+        <div>Pan/Zoom</div><b>drag empty space • wheel/trackpad</b>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div>Double-click floating box to hide/show</div>
+      <div id="status">ready</div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="c"></canvas>
+
+    <div class="zenToolbar hidden" id="zenToolbar">
+      <button class="primary" id="restoreMenusBtn">Show menus</button>
+      <button id="restoreAnalysisBtn">Show analysis</button>
+      <button id="recenterBtn2">Recenter</button>
+      <button id="toggleFocusBtn2" class="ghost">Focus: OFF</button>
+      <span class="hintKey">keys: M menus • A analysis • V venn-only</span>
+    </div>
+
+    <div class="floating" id="floating">
+      <div class="floatingHeader" id="floatingHeader" title="Drag • inertia after release • double-click box to hide/show">
+        <div>
+          <div class="name">Fact check / analysis</div>
+          <div class="mini" id="floatingMini">Click a region, member label, or word</div>
+        </div>
+        <div class="pillRow">
+          <div class="pill active" data-view="word">Word</div>
+          <div class="pill" data-view="region">Region</div>
+          <div class="pill" data-view="compare">Compare</div>
+          <div class="pill" data-view="list">List</div>
+        </div>
+      </div>
+      <div class="floatingBody" id="floatingBody"></div>
+    </div>
+  </div>
+
+  <div class="panel rightPanel">
+    <div class="panelHeader">
+      <div>
+        <div class="title">Buckets</div>
+        <div class="sub">structured list view for correctness</div>
+      </div>
+      <div class="btnRow">
+        <button class="danger" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <div class="panelBody" id="bucketsPanel"></div>
+    <div class="foot">
+      <div id="bucketCount">0 buckets</div>
+      <div id="tokenCount">0 tokens</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const MEMBERS = [
+    { key:"pet",         label:"pet",         color:"#9bbcff" },
+    { key:"catsoup",     label:"catsoup",     color:"#a7ffcc" },
+    { key:"xe",          label:"xe",          color:"#ffd9a6" },
+    { key:"johnwow",     label:"johnwow",     color:"#ffb3da" },
+    { key:"bookie",      label:"bookie",      color:"#d5c3ff" },
+    { key:"kingcon2k11", label:"kingcon2k11", color:"#b6f3ff" },
+  ];
+
+  const state = {
+    textByMember: Object.fromEntries(MEMBERS.map(m => [m.key, ""])),
+    settings: { bgMode:"dark", spacing:250, size:300, pull:0.60, opacity:0.18, textSize:12, maxLabels:180, cullLabels:true, focusSelection:false },
+    view: "word",
+    selectedRegionMask: null,
+    selectedTokenKey: null,
+    compareA: null,
+    compareB: null,
+    panX: 0, panY: 0, zoom: 1,
+    selectedSuggestions: new Set(),
+    zen: false,
+    analysisHidden: false
+  };
+
+  const canvas = document.getElementById("c");
+  const stage = document.getElementById("stage");
+  const ctx = canvas.getContext("2d");
+
+  const inputsGrid = document.getElementById("inputsGrid");
+  const bucketsPanel = document.getElementById("bucketsPanel");
+  const bucketCountEl = document.getElementById("bucketCount");
+  const tokenCountEl = document.getElementById("tokenCount");
+  const statusEl = document.getElementById("status");
+
+  const floating = document.getElementById("floating");
+  const floatingBody = document.getElementById("floatingBody");
+  const floatingMini = document.getElementById("floatingMini");
+  const floatingHeader = document.getElementById("floatingHeader");
+
+  const zenToolbar = document.getElementById("zenToolbar");
+  const zenBtn = document.getElementById("zenBtn");
+  const toggleCullBtn = document.getElementById("toggleCullBtn");
+  const toggleFocusBtn = document.getElementById("toggleFocusBtn");
+  const toggleFocusBtn2 = document.getElementById("toggleFocusBtn2");
+  const restoreMenusBtn = document.getElementById("restoreMenusBtn");
+  const restoreAnalysisBtn = document.getElementById("restoreAnalysisBtn");
+  const recenterBtn2 = document.getElementById("recenterBtn2");
+
+  const bgModeSel = document.getElementById("bgMode");
+  const sSpacing = document.getElementById("sSpacing");
+  const sSize = document.getElementById("sSize");
+  const sPull = document.getElementById("sPull");
+  const sOpacity = document.getElementById("sOpacity");
+  const sText = document.getElementById("sText");
+  const sMaxLabels = document.getElementById("sMaxLabels");
+  const sSpacingVal = document.getElementById("sSpacingVal");  
+  const sMaxLabelsVal = document.getElementById("sMaxLabelsVal");
+  const sSizeVal = document.getElementById("sSizeVal");
+  const sPullVal = document.getElementById("sPullVal");
+  const sOpacityVal = document.getElementById("sOpacityVal");
+  const sTextVal = document.getElementById("sTextVal");
+
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const bitCount = (n)=>{ n=n>>>0; let c=0; while(n){ n&=(n-1); c++; } return c; };
+
+  function hexToRgb(hex){
+    const h=hex.replace("#","").trim();
+    const n=parseInt(h.length===3 ? h.split("").map(x=>x+x).join("") : h, 16);
+    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+  }
+  function rgbToHex(r,g,b){ return "#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+  function hexToRgba(hex,a){ const {r,g,b}=hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+  function hash(str){
+    let h=2166136261;
+    for (let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+    return (h>>>0);
+  }
+  function normalizeToken(t){ return t.trim().replace(/\s+/g," "); }
+
+  function hslToHex(h,s,l){
+    s/=100; l/=100;
+    const k = n => (n + h/30) % 12;
+    const a = s * Math.min(l, 1-l);
+    const f = n => l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n), 1)));
+    const r = Math.round(255 * f(0));
+    const g = Math.round(255 * f(8));
+    const b = Math.round(255 * f(4));
+    return rgbToHex(r,g,b);
+  }
+
+  function parseTaggedTokens(raw){
+    const parts = raw.split(/[\n,]+/g).map(s=>normalizeToken(s)).filter(Boolean);
+    const out = [];
+    const seen = new Set();
+    for (const p of parts){
+      const m = p.match(/^#([a-zA-Z0-9_\-]+)\s*[:\s]\s*(.+)$/);
+      let tag = null;
+      let text = p;
+      if (m){
+        tag = m[1].toLowerCase();
+        text = normalizeToken(m[2]);
+      }
+      const key = text.toLowerCase();
+      if (!key) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ text, key, tag });
+    }
+    return out;
+  }
+
+  function maskToMembers(mask){
+    const list=[];
+    for (let i=0;i<MEMBERS.length;i++) if (mask & (1<<i)) list.push(MEMBERS[i].label);
+    return list;
+  }
+
+  function mixMaskColor(mask){
+    let r=0,g=0,b=0,c=0;
+    for (let i=0;i<MEMBERS.length;i++){
+      if (mask & (1<<i)){
+        const rgb=hexToRgb(MEMBERS[i].color);
+        r+=rgb.r; g+=rgb.g; b+=rgb.b; c++;
+      }
+    }
+    if(!c) return (state.settings.bgMode==="light" ? "#0c1117" : "#e7edf5");
+    r=Math.round(r/c); g=Math.round(g/c); b=Math.round(b/c);
+    return rgbToHex(r,g,b);
+  }
+
+  function tagColor(tag){
+    if (!tag) return null;
+    const seed = hash("tag:"+tag);
+    const hue = seed % 360;
+    const sat = 62;
+    const light = (state.settings.bgMode==="light") ? 38 : 64;
+    return hslToHex(hue, sat, light);
+  }
+
+  function buildBuckets(){
+    const tokenMap = new Map();
+    const tokenTags = new Map();
+    const tokenAnyTag = new Map();
+
+    for (let i=0;i<MEMBERS.length;i++){
+      const m = MEMBERS[i];
+      const tokens = parseTaggedTokens(state.textByMember[m.key] || "");
+      for (const tok of tokens){
+        const bit = (1<<i);
+        if (!tokenMap.has(tok.key)){
+          tokenMap.set(tok.key, { display: tok.text, mask: bit });
+        } else {
+          tokenMap.get(tok.key).mask |= bit;
+        }
+        if (tok.tag){
+          if (!tokenTags.has(tok.key)) tokenTags.set(tok.key, new Map());
+          const mp = tokenTags.get(tok.key);
+          mp.set(tok.tag, (mp.get(tok.tag)||0) + 1);
+        }
+      }
+    }
+
+    for (const [k, mp] of tokenTags){
+      let best = null, bestN = -1;
+      for (const [tag, n] of mp.entries()){
+        if (n > bestN || (n===bestN && tag < best)){
+          best = tag; bestN = n;
+        }
+      }
+      tokenAnyTag.set(k, best);
+    }
+
+    const buckets = new Map();
+    for (const [k, v] of tokenMap.entries()){
+      if (!buckets.has(v.mask)) buckets.set(v.mask, []);
+      buckets.get(v.mask).push(k);
+    }
+    for (const [mask, arr] of buckets){
+      arr.sort((a,b)=> (tokenMap.get(a).display).localeCompare(tokenMap.get(b).display, undefined, {sensitivity:"base"}));
+      buckets.set(mask, arr);
+    }
+    return { tokenMap, buckets, tokenAnyTag };
+  }
+
+  function getEllipses(){
+    const cx = 0, cy = 0;
+    const R = state.settings.spacing;
+    const a = state.settings.size;
+    const b = state.settings.size * 0.74;
+    const ellipses = [];
+    for (let i=0;i<MEMBERS.length;i++){
+      const ang = (-Math.PI/2) + i*(2*Math.PI/MEMBERS.length);
+      ellipses.push({ i, member: MEMBERS[i], x: cx + R*Math.cos(ang), y: cy + R*Math.sin(ang), a, b, rot: ang });
+    }
+    return { cx, cy, ellipses };
+  }
+
+  function pointInEllipse(px, py, e){
+    const dx = px - e.x, dy = py - e.y;
+    const cr = Math.cos(-e.rot), sr = Math.sin(-e.rot);
+    const lx = dx*cr - dy*sr;
+    const ly = dx*sr + dy*cr;
+    return (lx*lx)/(e.a*e.a) + (ly*ly)/(e.b*e.b) <= 1;
+  }
+
+  function hitTestRegion(worldX, worldY){
+    const { ellipses } = getEllipses();
+    let mask = 0;
+    for (const e of ellipses){
+      if (pointInEllipse(worldX, worldY, e)) mask |= (1<<e.i);
+    }
+    return mask;
+  }
+
+  function basePointForMask(mask){
+    const { cx, cy, ellipses } = getEllipses();
+    const ids = [];
+    for (let i=0;i<MEMBERS.length;i++) if (mask & (1<<i)) ids.push(i);
+    if (!ids.length) return {x:cx, y:cy};
+
+    let vx = 0, vy = 0;
+    for (const id of ids){ vx += ellipses[id].x; vy += ellipses[id].y; }
+    vx /= ids.length; vy /= ids.length;
+
+    const k = ids.length;
+    const pull = state.settings.pull;
+    const sharePull = Math.min(1, pull * (k>=3 ? 1.25 : (k===2 ? 1.0 : 0.6)));
+    return { x: vx*(1-sharePull) + cx*sharePull, y: vy*(1-sharePull) + cy*sharePull };
+  }
+
+  function findPointForMask(mask, baseX, baseY){
+    const { ellipses } = getEllipses();
+    const inside = (x,y) => {
+      for (const e of ellipses){
+        const pin = pointInEllipse(x,y,e);
+        const shouldIn = !!(mask & (1<<e.i));
+        if (shouldIn && !pin) return false;
+        if (!shouldIn && pin) return false;
+      }
+      return true;
+    };
+    if (inside(baseX, baseY)) return {x:baseX, y:baseY};
+
+    let r=0;
+    for (let k=0;k<1500;k++){
+      r += 0.22;
+      const t = k*0.55;
+      const x = baseX + Math.cos(t)*r*9;
+      const y = baseY + Math.sin(t)*r*9;
+      if (inside(x,y)) return {x,y};
+    }
+    return {x:baseX, y:baseY, fallback:true};
+  }
+
+  function rebuildInputs(){
+    inputsGrid.innerHTML = "";
+    for (const m of MEMBERS){
+      const wrap = document.createElement("div");
+      const lab = document.createElement("label");
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = m.color;
+      lab.appendChild(dot);
+      lab.appendChild(document.createTextNode(m.label));
+
+      const ta = document.createElement("textarea");
+      ta.placeholder = "type tokens… (comma/newline)\n#tag example: #ai lora training";
+      ta.value = state.textByMember[m.key] || "";
+      ta.addEventListener("input", () => {
+        state.textByMember[m.key] = ta.value;
+        statusEl.textContent = "updated";
+        requestRender();
+      });
+
+      wrap.appendChild(lab);
+      wrap.appendChild(ta);
+      inputsGrid.appendChild(wrap);
+    }
+  }
+
+  function applySettingsToUI(){
+    bgModeSel.value = state.settings.bgMode;
+    document.body.classList.toggle("light", state.settings.bgMode === "light");
+
+    sSpacing.value = state.settings.spacing;
+    sSize.value = state.settings.size;
+    sPull.value = Math.round(state.settings.pull * 100);
+    sOpacity.value = Math.round(state.settings.opacity * 100);
+    sText.value = state.settings.textSize;
+    sMaxLabels.value = state.settings.maxLabels;
+
+    sSpacingVal.textContent = state.settings.spacing;
+    sSizeVal.textContent = state.settings.size;
+    sPullVal.textContent = `${Math.round(state.settings.pull*100)}%`;
+    sOpacityVal.textContent = `${Math.round(state.settings.opacity*100)}%`;
+    sTextVal.textContent = `${state.settings.textSize}px`;
+    sMaxLabelsVal.textContent = `${state.settings.maxLabels}`;
+    toggleCullBtn.textContent = `Cull labels: ${state.settings.cullLabels ? "ON" : "OFF"}`;
+    toggleCullBtn.classList.toggle("primary", state.settings.cullLabels);
+    toggleFocusBtn.textContent = `Focus selection: ${state.settings.focusSelection ? "ON" : "OFF"}`;
+    toggleFocusBtn.classList.toggle("primary", state.settings.focusSelection);
+    toggleFocusBtn.classList.toggle("ghost", !state.settings.focusSelection);
+    if (toggleFocusBtn2) toggleFocusBtn2.textContent = `Focus: ${state.settings.focusSelection ? "ON" : "OFF"}`;
+
+  }
+
+  bgModeSel.addEventListener("change", () => {
+    state.settings.bgMode = bgModeSel.value;
+    applySettingsToUI();
+    beep("bubble");
+    requestRender();
+  });
+
+  const sliderHooks = [
+    [sSpacing, (v)=>state.settings.spacing = +v],
+    [sSize,    (v)=>state.settings.size = +v],
+    [sPull,    (v)=>state.settings.pull = (+v)/100],
+    [sOpacity, (v)=>state.settings.opacity = (+v)/100],
+    [sText,    (v)=>state.settings.textSize = +v],
+    [sMaxLabels,(v)=>state.settings.maxLabels = +v],
+  ];
+  for (const [el, set] of sliderHooks){
+    el.addEventListener("input", () => {
+      set(el.value);
+      applySettingsToUI();
+      beep("tick", 0.12);
+      requestRender();
+    });
+  }
+
+  document.getElementById("recenterBtn").addEventListener("click", () => { recenter(); });
+  recenterBtn2.addEventListener("click", () => { recenter(); });
+
+  function recenter(){
+    state.panX = 0; state.panY = 0; state.zoom = 1;
+    beep("bubble");
+    requestRender();
+  }
+
+  document.getElementById("smartPresetBtn").addEventListener("click", () => {
+    state.settings.spacing = 270;
+    state.settings.size = 325;
+    state.settings.pull = 0.66;
+    state.settings.opacity = (state.settings.bgMode==="light" ? 0.12 : 0.16);
+    state.settings.textSize = 12;
+    state.settings.maxLabels = 180;
+    state.settings.cullLabels = true;
+    state.settings.focusSelection = false;
+    applySettingsToUI();
+    beep("bubble");
+    requestRender();
+  });
+
+  document.getElementById("randomizeColorsBtn").addEventListener("click", () => {
+    randomizeMemberColors();
+    rebuildInputs();
+    beep("bubble");
+    requestRender();
+  });
+
+
+  toggleCullBtn.addEventListener("click", () => {
+    state.settings.cullLabels = !state.settings.cullLabels;
+    applySettingsToUI();
+    beep("tick", 0.12);
+    requestRender();
+  });
+
+  function syncFocusButtons(){
+    applySettingsToUI();
+    requestRender();
+  }
+
+  function toggleFocus(){
+    state.settings.focusSelection = !state.settings.focusSelection;
+    syncFocusButtons();
+    beep("bubble");
+  }
+
+  toggleFocusBtn.addEventListener("click", toggleFocus);
+  if (toggleFocusBtn2) toggleFocusBtn2.addEventListener("click", toggleFocus);
+
+
+  document.getElementById("exportPngBtn").addEventListener("click", downloadPNG);
+  document.getElementById("saveJsonBtn").addEventListener("click", saveJSON);
+  document.getElementById("loadJsonBtn").addEventListener("click", () => document.getElementById("loadJsonFile").click());
+  document.getElementById("loadJsonFile").addEventListener("change", loadJSONFromFile);
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    for (const m of MEMBERS) state.textByMember[m.key] = "";
+    state.selectedRegionMask = null;
+    state.selectedTokenKey = null;
+    state.compareA = null; state.compareB = null;
+    state.selectedSuggestions.clear();
+    beep("tick");
+    rebuildInputs();
+    requestRender();
+  });
+
+  function randomizeMemberColors(){
+    const base = Math.floor(Math.random()*360);
+    const sat = 70;
+    const light = (state.settings.bgMode==="light") ? 40 : 66;
+    for (let i=0;i<MEMBERS.length;i++){
+      const hue = (base + i*(360/MEMBERS.length)) % 360;
+      MEMBERS[i].color = hslToHex(hue, sat, light);
+    }
+  }
+
+  // ---- Diagram-only (zen) + menu restore ----
+  function setZen(on){
+    state.zen = !!on;
+    document.body.classList.toggle("zen", state.zen);
+    zenToolbar.classList.toggle("hidden", !state.zen);
+    if (state.zen){
+      // ensure analysis is hidden while zen
+      state.analysisHidden = floating.classList.contains("hidden");
+      floating.classList.add("hidden");
+    } else {
+      // restore analysis state
+      if (!state.analysisHidden) floating.classList.remove("hidden");
+    }
+    beep("bubble");
+    resize();
+    requestRender();
+  }
+  function showMenus(){
+    setZen(false);
+  }
+  function showAnalysis(){
+    state.analysisHidden = false;
+    floating.classList.remove("hidden");
+    if (state.zen) setZen(false);
+    beep("bubble");
+    requestRender();
+  }
+  function hideAnalysis(){
+    state.analysisHidden = true;
+    floating.classList.add("hidden");
+    beep("tick");
+    requestRender();
+  }
+
+  zenBtn.addEventListener("click", () => setZen(!state.zen));
+  restoreMenusBtn.addEventListener("click", () => showMenus());
+  restoreAnalysisBtn.addEventListener("click", () => showAnalysis());
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "v" || e.key === "V"){ setZen(!state.zen); }
+    if (e.key === "m" || e.key === "M"){ showMenus(); }
+    if (e.key === "a" || e.key === "A"){ floating.classList.contains("hidden") ? showAnalysis() : hideAnalysis(); }
+  });
+
+  // ---- Rendering loop ----
+  let needsRender = true;
+  let raf = null;
+  function requestRender(){
+    needsRender = true;
+    renderBucketsPanel();
+    renderFloating();
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function resize(){
+    const r = stage.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(r.width * dpr);
+    canvas.height = Math.floor(r.height * dpr);
+    canvas.style.width = r.width + "px";
+    canvas.style.height = r.height + "px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    requestRender();
+  }
+  window.addEventListener("resize", resize);
+  function tick(){ raf = null; if (needsRender) render(); }
+
+  const hit = { memberLabels: [], tokenRects: [] };
+
+  function roundedRect(ctx, x, y, w, h, r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+  function intersectsAny(a, arr){
+    for (const b of arr){
+      if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) return true;
+    }
+    return false;
+  }
+  function worldRectToScreen(r){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    return {...r, x:(r.x*state.zoom)+(w/2+state.panX), y:(r.y*state.zoom)+(h/2+state.panY), w:r.w*state.zoom, h:r.h*state.zoom};
+  }
+  function screenToWorld(sx, sy){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    return { x:(sx-(w/2+state.panX))/state.zoom, y:(sy-(h/2+state.panY))/state.zoom };
+  }
+
+  function render(){
+    needsRender = false;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    ctx.clearRect(0,0,w,h);
+    if (state.settings.bgMode !== "transparent"){
+      const bg = (state.settings.bgMode==="light") ? "#ffffff" : "#0b0d10";
+      ctx.fillStyle = bg;
+      ctx.fillRect(0,0,w,h);
+    }
+
+    ctx.save();
+    ctx.translate(w/2 + state.panX, h/2 + state.panY);
+    ctx.scale(state.zoom, state.zoom);
+
+    const { cx, cy, ellipses } = getEllipses();
+
+    for (const e of ellipses){
+      const col = e.member.color;
+      const op = state.settings.opacity;
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.rotate(e.rot);
+      ctx.beginPath();
+      ctx.ellipse(0,0,e.a,e.b,0,0,Math.PI*2);
+      ctx.fillStyle = hexToRgba(col, op);
+      ctx.fill();
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = hexToRgba(col, Math.min(0.55, op*2.8));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.font = `800 15px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = (state.settings.bgMode==="light") ? "rgba(12,17,23,.88)" : "rgba(231,237,245,.92)";
+    ctx.fillText("Slop Shop", cx, cy);
+    ctx.restore();
+
+    const labelRectsWorld = [];
+    ctx.save();
+    ctx.font = `800 13px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    for (const e of ellipses){
+      const ang = e.rot;
+      const lx = e.x + Math.cos(ang) * (e.a * 0.86);
+      const ly = e.y + Math.sin(ang) * (e.b * 0.86);
+
+      const isSelected = (state.compareA === e.i || state.compareB === e.i);
+      const bg = isSelected ? "rgba(183,199,255,.22)" : (state.settings.bgMode==="light" ? "rgba(255,255,255,.72)" : "rgba(0,0,0,.24)");
+      const br = isSelected ? "rgba(183,199,255,.30)" : (state.settings.bgMode==="light" ? "rgba(0,0,0,.14)" : "rgba(255,255,255,.12)");
+      const padX = 12, pillH = 22;
+      const text = e.member.label;
+      const tw = ctx.measureText(text).width;
+
+      const pillW = tw + padX*2 + 14;
+      roundedRect(ctx, lx - pillW/2, ly - pillH/2, pillW, pillH, 999);
+      ctx.fillStyle = bg; ctx.fill();
+      ctx.strokeStyle = br; ctx.lineWidth = 1; ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(lx - pillW/2 + 12, ly, 4.6, 0, Math.PI*2);
+      ctx.fillStyle = e.member.color; ctx.fill();
+      ctx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.18)";
+      ctx.lineWidth = 1; ctx.stroke();
+
+      ctx.fillStyle = (state.settings.bgMode==="light") ? "rgba(12,17,23,.88)" : hexToRgba(e.member.color, 0.95);
+      ctx.fillText(text, lx + 6, ly);
+
+      labelRectsWorld.push({ i:e.i, x: lx - pillW/2, y: ly - pillH/2, w: pillW, h: pillH });
+    }
+    ctx.restore();
+
+    const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+    const textSize = state.settings.textSize;
+    const placed = [];
+    const padding = 6;
+
+    hit.tokenRects = [];
+    const tokenRectsWorld = [];
+
+    ctx.save();
+    ctx.font = `600 ${textSize}px ${getComputedStyle(document.documentElement).getPropertyValue("--mono")}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const masksSortedAll = [...buckets.keys()].sort((a,b)=> bitCount(+b) - bitCount(+a));
+
+    // Focus selection: only draw tokens in the selected exact bucket (region or clicked word).
+    let focusMask = null;
+    if (state.settings.focusSelection){
+      if (state.selectedTokenKey && tokenMap.has(state.selectedTokenKey)) focusMask = tokenMap.get(state.selectedTokenKey).mask;
+      else if (state.selectedRegionMask != null) focusMask = state.selectedRegionMask;
+    }
+
+    const masksSorted = focusMask != null ? [focusMask] : masksSortedAll;
+
+    // Priority ordering: selected word first, then selected bucket, then higher sharedness.
+    const maxLabels = Math.max(10, state.settings.maxLabels|0);
+    const cull = !!state.settings.cullLabels;
+
+    let drawn = 0;
+
+    for (const mask of masksSorted){
+      const keys0 = buckets.get(mask) || [];
+      const base = basePointForMask(mask);
+
+      // Build a priority list for this bucket
+      const keys = [...keys0];
+      keys.sort((ka,kb)=>{
+        const aSel = (state.selectedTokenKey===ka)?1:0;
+        const bSel = (state.selectedTokenKey===kb)?1:0;
+        if (aSel!==bSel) return bSel-aSel;
+        return (tokenMap.get(ka).display).localeCompare(tokenMap.get(kb).display, undefined, {sensitivity:"base"});
+      });
+
+      let jitter = 0;
+
+      for (const k of keys){
+        if (drawn >= maxLabels) break;
+
+        const disp = tokenMap.get(k).display;
+        const seed = hash(disp);
+        const ang = (seed % 6283)/1000;
+        const rad = 10 + (seed % 97);
+        const bx = base.x + Math.cos(ang)*(rad*0.4 + jitter);
+        const by = base.y + Math.sin(ang)*(rad*0.4 + jitter);
+        const p = findPointForMask(mask, bx, by);
+
+        let x = p.x, y = p.y;
+        const wTok = ctx.measureText(disp).width;
+
+        // Try to find a non-overlapping placement. If culling is ON, skip on failure.
+        let placedOk = false;
+        for (let tries=0; tries<40; tries++){
+          const rect = { x: x - wTok/2 - padding, y: y - textSize/2 - padding, w: wTok + padding*2, h: textSize + padding*2 };
+          if (!intersectsAny(rect, placed)){ placed.push(rect); placedOk = true; break; }
+          const t = tries*0.8;
+          x += Math.cos(ang+t)*3;
+          y += Math.sin(ang+t)*3;
+        }
+        if (cull && !placedOk){
+          jitter += 2;
+          continue;
+        }
+
+        if (state.selectedTokenKey === k){
+          ctx.save();
+          ctx.fillStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.06)" : "rgba(255,255,255,.06)";
+          roundedRect(ctx, x - wTok/2 - 10, y - textSize/2 - 8, wTok + 20, textSize + 16, 999);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(mixMaskColor(mask), 0.55);
+          ctx.lineWidth = 1.6;
+          ctx.setLineDash([6,6]);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        const mix = mixMaskColor(mask);
+        const baseTextColor = (state.settings.bgMode==="light") ? "rgba(12,17,23,.86)" : hexToRgba(mix, 0.92);
+
+        // subtle text halo for readability
+        ctx.save();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(255,255,255,.72)" : "rgba(0,0,0,.55)";
+        ctx.strokeText(disp, x, y);
+        ctx.restore();
+
+        ctx.fillStyle = baseTextColor;
+        ctx.fillText(disp, x, y);
+
+        const tag = tokenAnyTag.get(k) || null;
+        if (tag){
+          ctx.beginPath();
+          ctx.arc(x + wTok/2 + 8, y, 3.6, 0, Math.PI*2);
+          ctx.fillStyle = tagColor(tag);
+          ctx.fill();
+          ctx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.18)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        tokenRectsWorld.push({ tokenKey:k, mask, x: x - wTok/2 - 8, y: y - textSize/2 - 8, w: wTok + 16 + (tag ? 16 : 0), h: textSize + 16 });
+        jitter += 2;
+        drawn++;
+      }
+    }
+    ctx.restore();
+    ctx.restore();
+
+    hit.memberLabels = labelRectsWorld.map(r => worldRectToScreen(r));
+    hit.tokenRects = tokenRectsWorld.map(r => worldRectToScreen(r));
+  }
+
+  // ---- Interaction (diagram clicks) ----
+  let isPanning = false;
+  let last = null;
+
+  canvas.addEventListener("pointerdown", (ev) => {
+    canvas.setPointerCapture(ev.pointerId);
+    const rect = stage.getBoundingClientRect();
+    const sx = ev.clientX - rect.left;
+    const sy = ev.clientY - rect.top;
+
+    const tokHit = hit.tokenRects.find(r => sx>=r.x && sx<=r.x+r.w && sy>=r.y && sy<=r.y+r.h);
+    if (tokHit){
+      state.selectedTokenKey = tokHit.tokenKey;
+      state.selectedRegionMask = tokHit.mask;
+      setActiveViewPill("word");
+      state.selectedSuggestions.clear();
+      beep("bubble");
+      renderFloating();
+      requestRender();
+      return;
+    }
+
+    const memHit = hit.memberLabels.find(r => sx>=r.x && sx<=r.x+r.w && sy>=r.y && sy<=r.y+r.h);
+    if (memHit){
+      if (state.compareA == null || (state.compareA != null && state.compareB != null)){ state.compareA = memHit.i; state.compareB = null; }
+      else if (state.compareA != null && state.compareB == null){ if (memHit.i === state.compareA) state.compareA = null; else state.compareB = memHit.i; }
+      setActiveViewPill("compare");
+      state.selectedTokenKey = null;
+      state.selectedSuggestions.clear();
+      beep("bubble");
+      renderFloating();
+      requestRender();
+      return;
+    }
+
+    const p = screenToWorld(sx, sy);
+    const mask = hitTestRegion(p.x, p.y);
+    if (mask !== 0){
+      state.selectedRegionMask = mask;
+      state.selectedTokenKey = null;
+      setActiveViewPill("region");
+      state.selectedSuggestions.clear();
+      beep("tick");
+      renderFloating();
+      requestRender();
+      return;
+    }
+
+    isPanning = true;
+    last = { x: ev.clientX, y: ev.clientY };
+  });
+
+  canvas.addEventListener("pointermove", (ev) => {
+    if (!isPanning) return;
+    const dx = ev.clientX - last.x;
+    const dy = ev.clientY - last.y;
+    state.panX += dx; state.panY += dy;
+    last = { x: ev.clientX, y: ev.clientY };
+    requestRender();
+  });
+  canvas.addEventListener("pointerup", () => { isPanning = false; });
+
+  canvas.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const delta = -ev.deltaY;
+    const factor = Math.exp(delta * 0.0012);
+    const old = state.zoom;
+    const next = clamp(old * factor, 0.35, 2.8);
+
+    const rect = stage.getBoundingClientRect();
+    const sx = ev.clientX - rect.left;
+    const sy = ev.clientY - rect.top;
+
+    const before = screenToWorld(sx, sy);
+    state.zoom = next;
+    const after = screenToWorld(sx, sy);
+
+    state.panX += (after.x - before.x) * state.zoom;
+    state.panY += (after.y - before.y) * state.zoom;
+    requestRender();
+  }, { passive:false });
+
+  floating.addEventListener("dblclick", () => {
+    floating.classList.toggle("hidden");
+    state.analysisHidden = floating.classList.contains("hidden");
+    beep("bubble");
+  });
+
+  // ---- Floating drag with inertia ----
+  let menuDrag = null;
+  floatingHeader.addEventListener("pointerdown", (ev) => {
+    if (floating.classList.contains("hidden")) return;
+    // Don’t start dragging when clicking on pills/buttons/controls (this was breaking the tab buttons)
+    if (ev.target.closest && (ev.target.closest(".pill") || ev.target.closest("button") || ev.target.closest("input") || ev.target.closest("select"))) return;
+    floatingHeader.setPointerCapture(ev.pointerId);
+    const r = floating.getBoundingClientRect();
+    menuDrag = { startX:ev.clientX, startY:ev.clientY, origX:r.left, origY:r.top, vx:0, vy:0, lastX:ev.clientX, lastY:ev.clientY, lastT:performance.now() };
+  });
+  window.addEventListener("pointermove", (ev) => {
+    if (!menuDrag) return;
+    const dx = ev.clientX - menuDrag.startX;
+    const dy = ev.clientY - menuDrag.startY;
+
+    const now = performance.now();
+    const dt = Math.max(1, now - menuDrag.lastT);
+    menuDrag.vx = (ev.clientX - menuDrag.lastX) / dt;
+    menuDrag.vy = (ev.clientY - menuDrag.lastY) / dt;
+    menuDrag.lastX = ev.clientX; menuDrag.lastY = ev.clientY; menuDrag.lastT = now;
+
+    setFloatingPos(menuDrag.origX + dx, menuDrag.origY + dy);
+  });
+  window.addEventListener("pointerup", () => {
+    if (!menuDrag) return;
+    const vx = menuDrag.vx, vy = menuDrag.vy;
+    menuDrag = null;
+
+    const friction = 0.92;
+    let ivx = vx * 26;
+    let ivy = vy * 26;
+    let lastT = performance.now();
+
+    const step = () => {
+      const now = performance.now();
+      const dt = Math.min(32, now - lastT);
+      lastT = now;
+
+      const r = floating.getBoundingClientRect();
+      setFloatingPos(r.left + ivx*dt, r.top + ivy*dt);
+
+      ivx *= Math.pow(friction, dt/16);
+      ivy *= Math.pow(friction, dt/16);
+
+      if (Math.abs(ivx)+Math.abs(ivy) > 0.02) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+
+  function setFloatingPos(x, y){
+    const st = stage.getBoundingClientRect();
+    const r = floating.getBoundingClientRect();
+    const minX = st.left + 8;
+    const minY = st.top + 8;
+    const maxX = st.right - r.width - 8;
+    const maxY = st.bottom - r.height - 8;
+    const nx = clamp(x, minX, maxX);
+    const ny = clamp(y, minY, maxY);
+    floating.style.left = (nx - st.left) + "px";
+    floating.style.top = (ny - st.top) + "px";
+    floating.style.position = "absolute";
+  }
+
+  function setActiveViewPill(view){
+    floatingHeader.querySelectorAll(".pill").forEach(x => x.classList.toggle("active", x.dataset.view === view));
+    state.view = view;
+  }
+  floatingHeader.querySelectorAll(".pill").forEach(p => {
+    p.addEventListener("click", () => {
+      setActiveViewPill(p.dataset.view);
+      state.selectedSuggestions.clear();
+      beep("tick");
+      renderFloating();
+    });
+  });
+
+  // ---- Suggest engine (aesthetics/tech/film/money/AI-first) ----
+  const PHRASE_MAP = {
+    // aesthetics / style
+    "y2k": ["early 2000s","chrome type","gel UI","frutiger aero","webcore","clean gradients","ui kits"],
+    "frutiger aero": ["glass UI","bubble icons","nature-tech","aqua gradients","gloss","soft highlights"],
+    "webcore": ["internet debris","low-fi","forum aesthetics","gif culture","compression","scanlines"],
+    "analog": ["tape","vhs","crt bloom","scanlines","tracking noise","timebase wobble"],
+    "analog tech": ["signal flow","hardware","synth culture","retro futurism","lo-fi circuitry","modular thinking"],
+    "glitch": ["datamosh","artifacting","macroblocks","rolling shutter","scanline displacement","video feedback"],
+    "mecha": ["hard-surface design","industrial","robotics","kitbash","machinery detail","sci-fi UI"],
+    "mutant": ["hybrid biology","body horror","mutation motifs","surreal anatomy","weird organism design"],
+
+    // film / post
+    "editing": ["post-production","deliverables","client notes","versioning","timeline craft","pacing"],
+    "clean editing": ["commercial polish","brand-safe","tight pacing","broadcast-ready","client-facing finish"],
+    "color": ["grading","look dev","ACES/Color Management","film emulation","shot matching","skin-safe"],
+    "compositing": ["keying","roto","track","matchmove","plate prep","cleanup"],
+    "vfx": ["after effects","nuke mindset","tracking","roto","comp pipeline","render passes"],
+    "motion graphics": ["title design","kinetic type","lower thirds","brand motion","styleframes"],
+
+    // money / jobs
+    "money": ["rates","day rate","retainer","scope control","usage rights","licensing"],
+    "jobs": ["client work","pitching","briefs","deliverables","deadlines","contracts"],
+    "producer": ["budgeting","scheduling","client comms","crew coordination","risk management"],
+    "freelance": ["invoicing","contracts","scope creep prevention","client onboarding","maintenance"],
+
+    // ai
+    "ai": ["prompting","iteration","dataset curation","style control","post-processing","toolchain"],
+    "prompting": ["prompt engineering","negative prompting","style tokens","image conditioning","seed control"],
+    "lora": ["LoRA training","dataset prep","captioning","finetuning","style consistency","model management"],
+    "midjourney": ["prompt tokens","stylize control","reference images","moodboards","seed exploration"],
+    "comfyui": ["node graphs","controlnet","upscalers","workflow presets","batch rendering","samplers"],
+    "sora": ["video prompting","shot continuity","camera direction","temporal consistency","edit-friendly outputs"],
+    "runway": ["gen video","inpainting","motion brush","background removal","iterative comp"]
+  };
+
+  const RULES = [
+    // aesthetics
+    { rx:/\b(y2k|2000s|early\s*2000)\b/, out:["chrome type","gel UI","clean gradients","low poly","flash-era UI","webcore"] },
+    { rx:/\b(frutiger|aero|aqua)\b/, out:["glass UI","bubble icons","aqua gradients","nature-tech","soft highlights"] },
+    { rx:/\b(glitch|datamosh|artifact)\b/, out:["macroblocks","compression","video feedback","scanline displacement","rolling shutter"] },
+    { rx:/\b(analog|vhs|tape|crt)\b/, out:["crt bloom","scanlines","tracking noise","timebase wobble","film grain"] },
+
+    // tech/tooling
+    { rx:/\b(touchdesigner|td)\b/, out:["real-time systems","projection mapping","feedback loops","GPU pipelines","interactive controls"] },
+    { rx:/\b(three\.js|webgl|shader)\b/, out:["shader art","GPU fragments","procedural visuals","interactive 3D","render loops"] },
+    { rx:/\b(after\s*effects|ae)\b/, out:["compositing","expressions","motion graphics","template systems","render queue"] },
+    { rx:/\b(premiere|pr)\b/, out:["edit pipeline","proxies","deliverables","multicam","export presets"] },
+    { rx:/\b(resolve|davinci)\b/, out:["grading","color management","shot matching","delivery specs","node trees"] },
+
+    // film industry / production
+    { rx:/\b(edit|editing|editor|post)\b/, out:["post-production","deliverables","versioning","client notes","pacing","QC"] },
+    { rx:/\b(color|grade|grading)\b/, out:["look dev","film emulation","shot matching","ACES/Color Management","broadcast safe"] },
+    { rx:/\b(vfx|comp|composit)\b/, out:["tracking","roto","keying","plate prep","cleanup","matchmove"] },
+
+    // money/jobs
+    { rx:/\b(rate|rates|price|pricing|budget)\b/, out:["day rate","retainer","scope control","revision policy","usage rights","licensing"] },
+    { rx:/\b(client|clients|agency)\b/, out:["briefs","deliverables","timeline","stakeholder updates","SOW","approval gates"] },
+    { rx:/\b(contract|invoice|invoic|payment)\b/, out:["invoicing","deposit","net terms","late fees","usage rights","paper trail"] },
+
+    // ai
+    { rx:/\b(ai|neural|model|gen|lora|prompt|diffusion)\b/, out:["prompt engineering","style control","dataset curation","controlnet","upscaling","post-processing"] },
+    { rx:/\b(video\s*ai|gen\s*video|temporal)\b/, out:["shot continuity","temporal consistency","edit-friendly outputs","inpainting","frame control"] },
+  ];
+
+  function domainBoost(token){
+    const t = token.toLowerCase();
+    const boosts = new Set();
+    if (/\b(ai|lora|diffusion|prompt|comfy|sora|runway|midjourney)\b/.test(t)) boosts.add("ai");
+    if (/\b(edit|vfx|comp|grade|color|premiere|ae|resolve|nuke)\b/.test(t)) boosts.add("film");
+    if (/\b(rate|budget|invoice|payment|retainer|license|scope|contract|client)\b/.test(t)) boosts.add("money");
+    if (/\b(y2k|aero|frutiger|webcore|glitch|analog|crt|vhs|low\s*poly|chrome)\b/.test(t)) boosts.add("aesthetic");
+    if (/\b(touchdesigner|webgl|shader|three\.js|toolchain|pipeline)\b/.test(t)) boosts.add("tech");
+    return boosts;
+  }
+
+  function suggestForToken(display, tag=null){
+    const t = display.toLowerCase().trim();
+    const out = new Set();
+
+    // direct exact matches
+    if (PHRASE_MAP[t]) PHRASE_MAP[t].forEach(x=>out.add(x));
+
+    // substring matches for known keys
+    for (const [k, arr] of Object.entries(PHRASE_MAP)){
+      if (k.length < 4) continue;
+      if (t !== k && t.includes(k)) arr.forEach(x=>out.add(x));
+    }
+
+    // regex rules
+    for (const r of RULES){ if (r.rx.test(t)) r.out.forEach(x=>out.add(x)); }
+
+    // tag-driven bias (if token is tagged)
+    if (tag){
+      const tg = tag.toLowerCase();
+      if (/(ai|ml|gen)/.test(tg)) ["prompt engineering","style control","dataset curation","controlnet","upscaling"].forEach(x=>out.add(x));
+      if (/(film|edit|post|vfx|grade)/.test(tg)) ["deliverables","versioning","QC","client notes","look dev"].forEach(x=>out.add(x));
+      if (/(money|biz|client)/.test(tg)) ["rates","scope control","usage rights","licensing","retainer"].forEach(x=>out.add(x));
+      if (/(aesthetic|style|look)/.test(tg)) ["early 2000s","gloss UI","texture","palette discipline","art direction"].forEach(x=>out.add(x));
+      if (/(tech|tool|code)/.test(tg)) ["toolchain","pipeline","automation","render loops","interactive controls"].forEach(x=>out.add(x));
+    }
+
+    // fallbacks: make them still on-theme (not generic)
+    if (out.size === 0){
+      const boosts = domainBoost(t);
+      if (boosts.has("ai")) ["prompt engineering","style control","dataset curation","toolchain","post-processing"].forEach(x=>out.add(x));
+      if (boosts.has("film")) ["deliverables","versioning","client notes","pacing","QC"].forEach(x=>out.add(x));
+      if (boosts.has("money")) ["rates","scope control","licensing","retainer","deposit"].forEach(x=>out.add(x));
+      if (boosts.has("aesthetic")) ["art direction","texture","palette","typography","composition"].forEach(x=>out.add(x));
+      if (boosts.has("tech")) ["pipeline","automation","render loops","GPU mindset","systems thinking"].forEach(x=>out.add(x));
+      if (out.size === 0){
+        ["art direction","toolchain","deliverables","rates","prompting","look dev"].forEach(x=>out.add(x));
+      }
+    }
+
+    // diversify output: prioritize the five domains you asked for
+    const domains = [
+      {name:"aesthetic", rx:/\b(y2k|aero|webcore|gloss|texture|typography|palette|art direction|low poly|chrome|glitch|analog|crt|vhs|scanline)\b/i},
+      {name:"tech",      rx:/\b(toolchain|pipeline|automation|gpu|shader|webgl|three\.js|touchdesigner|systems|interactive|render)\b/i},
+      {name:"film",      rx:/\b(deliverables|post-production|vfx|compositing|grading|pacing|qc|roto|tracking|look dev|shot matching)\b/i},
+      {name:"money",     rx:/\b(rates|day rate|retainer|scope|revision|invoice|deposit|licensing|usage rights|contracts|briefs)\b/i},
+      {name:"ai",        rx:/\b(prompt|diffusion|lora|dataset|controlnet|upscal|midjourney|comfyui|sora|runway|style control|temporal)\b/i},
+    ];
+
+    const all = [...out].filter(x => x.toLowerCase() !== t);
+    const picked = [];
+    for (const d of domains){
+      for (const s of all){
+        if (picked.length >= 14) break;
+        if (picked.includes(s)) continue;
+        if (d.rx.test(s)) picked.push(s);
+        if (picked.length >= 14) break;
+      }
+    }
+    // fill remainder
+    for (const s of all){
+      if (picked.length >= 14) break;
+      if (!picked.includes(s)) picked.push(s);
+    }
+    return picked.slice(0,14);
+  }
+
+  function applySuggestionsToMembers(suggestions, memberIdxs, tag=null){
+    for (const idx of memberIdxs){
+      const mkey = MEMBERS[idx].key;
+      const existing = new Set(parseTaggedTokens(state.textByMember[mkey]||"").map(x=>x.key));
+      const merged = parseTaggedTokens(state.textByMember[mkey]||"").map(x => ({...x}));
+      for (const s of suggestions){
+        const key = s.toLowerCase();
+        if (existing.has(key)) continue;
+        merged.push({ text: s, key, tag });
+        existing.add(key);
+      }
+      state.textByMember[mkey] = merged.map(x => x.tag ? `#${x.tag} ${x.text}` : x.text).join("\n");
+    }
+    rebuildInputs();
+    requestRender();
+  }
+
+  function makeMemberBadge(mask){
+    const mems = [];
+    for (let i=0;i<MEMBERS.length;i++){
+      if (mask & (1<<i)){
+        const m = MEMBERS[i];
+        mems.push(`<span class="badge"><span class="dot" style="background:${m.color};border:1px solid rgba(255,255,255,.24)"></span>${escapeHtml(m.label)}</span>`);
+      }
+    }
+    return mems.join(" ");
+  }
+
+  function renderFloating(){
+    const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+
+    if (state.view === "word"){
+      if (!state.selectedTokenKey) floatingMini.textContent = "Click a word on the diagram to inspect it";
+      else {
+        const disp = tokenMap.get(state.selectedTokenKey)?.display || state.selectedTokenKey;
+        floatingMini.textContent = `Word: ${disp}`;
+      }
+    }
+    if (state.view === "region"){
+      if (state.selectedRegionMask == null) floatingMini.textContent = "Click an overlap region to inspect its exact bucket";
+      else {
+        const mems = maskToMembers(state.selectedRegionMask);
+        floatingMini.textContent = `Bucket: ${mems.join(" ∩ ")} (${mems.length})`;
+      }
+    }
+    if (state.view === "compare"){
+      if (state.compareA == null) floatingMini.textContent = "Click two member labels in the diagram";
+      else if (state.compareB == null) floatingMini.textContent = `Selected A: ${MEMBERS[state.compareA].label} — pick B`;
+      else floatingMini.textContent = `Compare: ${MEMBERS[state.compareA].label} vs ${MEMBERS[state.compareB].label}`;
+    }
+    if (state.view === "list") floatingMini.textContent = `Verification list • ${buckets.size} buckets • ${tokenMap.size} unique tokens`;
+
+    floatingBody.innerHTML = "";
+
+    if (state.view === "word"){
+      const wrap = document.createElement("div");
+      wrap.className = "list";
+      wrap.innerHTML = `<h4>Word inspector</h4>`;
+      if (!state.selectedTokenKey || !tokenMap.has(state.selectedTokenKey)){
+        const s = document.createElement("div");
+        s.className = "small";
+        s.textContent = "Click any word on the diagram (not just circles) to open details and suggestions.";
+        wrap.appendChild(s);
+        floatingBody.appendChild(wrap);
+        return;
+      }
+
+      const tok = tokenMap.get(state.selectedTokenKey);
+      const mask = tok.mask;
+      const tag = tokenAnyTag.get(state.selectedTokenKey) || null;
+
+      const meta = document.createElement("div");
+      meta.className = "small";
+      meta.innerHTML = `${makeMemberBadge(mask)} <span class="badge">mask ${mask}</span>${tag ? ` <span class="badge"><span class="tagdot" style="background:${tagColor(tag)}"></span>#${escapeHtml(tag)}</span>` : ""}`;
+      wrap.appendChild(meta);
+
+      const tokWrap = document.createElement("div");
+      tokWrap.className = "tokens";
+      tokWrap.style.marginTop = "10px";
+      const tokenChip = document.createElement("div");
+      tokenChip.className = "token selected";
+      tokenChip.style.cursor = "default";
+      tokenChip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(tok.display)}`;
+      tokWrap.appendChild(tokenChip);
+      wrap.appendChild(tokWrap);
+
+      const sug = suggestForToken(tok.display, tag);
+      state.selectedSuggestions = new Set(sug);
+
+      const sugBox = document.createElement("div");
+      sugBox.className = "list";
+      sugBox.innerHTML = `<h4>Suggested similarities / differences</h4>`;
+
+      const help = document.createElement("div");
+      help.className = "small";
+      help.textContent = "Click suggestions to toggle. Then add them to one person, multiple people, or everyone in this overlap bucket.";
+      sugBox.appendChild(help);
+
+      const sugTokens = document.createElement("div");
+      sugTokens.className = "tokens";
+      sugTokens.style.marginTop = "10px";
+
+      for (const s of sug){
+        const chip = document.createElement("div");
+        chip.className = "token";
+        chip.textContent = s;
+        chip.classList.toggle("selected", state.selectedSuggestions.has(s));
+        chip.addEventListener("click", () => {
+          if (state.selectedSuggestions.has(s)) state.selectedSuggestions.delete(s);
+          else state.selectedSuggestions.add(s);
+          chip.classList.toggle("selected", state.selectedSuggestions.has(s));
+          beep("tick", 0.10);
+          const any = state.selectedSuggestions.size > 0;
+          btnBucket.disabled = !any;
+          btnPick.disabled = !any;
+          btnOne.disabled = !any;
+        });
+        sugTokens.appendChild(chip);
+      }
+      sugBox.appendChild(sugTokens);
+
+      const row = document.createElement("div");
+      row.className = "btnRow";
+      row.style.marginTop = "10px";
+
+      const membersInMask = [];
+      for (let i=0;i<MEMBERS.length;i++) if (mask & (1<<i)) membersInMask.push(i);
+
+      const btnBucket = document.createElement("button");
+      btnBucket.className = "primary";
+      btnBucket.textContent = "Add selected → everyone in this bucket";
+      btnBucket.addEventListener("click", () => {
+        const sel = [...state.selectedSuggestions];
+        if (!sel.length) return;
+        applySuggestionsToMembers(sel, membersInMask, tag || "suggest");
+        statusEl.textContent = "suggestions added";
+        beep("bubble");
+      });
+
+      const btnPick = document.createElement("button");
+      btnPick.textContent = "Pick members…";
+      btnPick.addEventListener("click", () => {
+        const sel = [...state.selectedSuggestions];
+        if (!sel.length) return;
+        openMemberPicker(sel, tag || "suggest");
+        beep("tick");
+      });
+
+      const btnOne = document.createElement("button");
+      btnOne.className = "ghost";
+      btnOne.textContent = "Add selected → single member…";
+      btnOne.addEventListener("click", () => {
+        const sel = [...state.selectedSuggestions];
+        if (!sel.length) return;
+        openSinglePicker(sel, tag || "suggest");
+        beep("tick");
+      });
+
+      const any = state.selectedSuggestions.size > 0;
+      btnBucket.disabled = !any;
+      btnPick.disabled = !any;
+      btnOne.disabled = !any;
+
+      row.appendChild(btnBucket);
+      row.appendChild(btnPick);
+      row.appendChild(btnOne);
+      sugBox.appendChild(row);
+
+      floatingBody.appendChild(wrap);
+      floatingBody.appendChild(sugBox);
+      return;
+    }
+
+    if (state.view === "region"){
+      const wrap = document.createElement("div");
+      wrap.className = "list";
+      wrap.innerHTML = `<h4>Exact overlap bucket</h4>`;
+
+      if (state.selectedRegionMask == null){
+        const s = document.createElement("div");
+        s.className = "small";
+        s.textContent = "Click inside an overlap on the diagram.";
+        wrap.appendChild(s);
+        floatingBody.appendChild(wrap);
+        return;
+      }
+
+      const mask = state.selectedRegionMask;
+      const keys = buckets.get(mask) || [];
+      const meta = document.createElement("div");
+      meta.className = "small";
+      meta.innerHTML = `${makeMemberBadge(mask)} <span class="badge">${keys.length} tokens</span> <span class="badge">mask ${mask}</span>`;
+      wrap.appendChild(meta);
+
+      const tokWrap = document.createElement("div");
+      tokWrap.className = "tokens";
+      tokWrap.style.marginTop = "10px";
+      for (const k of keys){
+        const disp = tokenMap.get(k).display;
+        const tag = tokenAnyTag.get(k) || null;
+        const chip = document.createElement("div");
+        chip.className = "token";
+        chip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(disp)}`;
+        chip.addEventListener("click", () => {
+          state.selectedTokenKey = k;
+          setActiveViewPill("word");
+          state.selectedSuggestions.clear();
+          beep("bubble");
+          renderFloating();
+          requestRender();
+        });
+        tokWrap.appendChild(chip);
+      }
+      wrap.appendChild(tokWrap);
+      floatingBody.appendChild(wrap);
+      return;
+    }
+
+    if (state.view === "compare"){
+      const wrap = document.createElement("div");
+      wrap.className = "list";
+      wrap.innerHTML = `<h4>Comparison output</h4>`;
+
+      if (state.compareA == null || state.compareB == null){
+        const s = document.createElement("div");
+        s.className = "small";
+        s.textContent = "Click member label A then B in the diagram.";
+        wrap.appendChild(s);
+        floatingBody.appendChild(wrap);
+        return;
+      }
+
+      const aKey = MEMBERS[state.compareA].key;
+      const bKey = MEMBERS[state.compareB].key;
+
+      const aTokens = new Map(parseTaggedTokens(state.textByMember[aKey]||"").map(x=>[x.key, x]));
+      const bTokens = new Map(parseTaggedTokens(state.textByMember[bKey]||"").map(x=>[x.key, x]));
+
+      const shared = [];
+      const aOnly = [];
+      const bOnly = [];
+
+      for (const k of aTokens.keys()){ if (bTokens.has(k)) shared.push(k); else aOnly.push(k); }
+      for (const k of bTokens.keys()){ if (!aTokens.has(k)) bOnly.push(k); }
+
+      const header = document.createElement("div");
+      header.className = "small";
+      header.innerHTML = `<span class="badge"><span class="dot" style="background:${MEMBERS[state.compareA].color}"></span>${escapeHtml(MEMBERS[state.compareA].label)}</span> vs <span class="badge"><span class="dot" style="background:${MEMBERS[state.compareB].color}"></span>${escapeHtml(MEMBERS[state.compareB].label)}</span>`;
+      wrap.appendChild(header);
+
+      const { tokenMap, tokenAnyTag } = buildBuckets();
+      const sec = (title, arr) => {
+        const box = document.createElement("div");
+        box.className = "list";
+        box.style.marginTop = "10px";
+        box.innerHTML = `<h4>${escapeHtml(title)} (${arr.length})</h4>`;
+        const toks = document.createElement("div");
+        toks.className = "tokens";
+        arr.sort((x,y)=> (tokenMap.get(x)?.display||x).localeCompare(tokenMap.get(y)?.display||y, undefined, {sensitivity:"base"}));
+        for (const k of arr){
+          const disp = tokenMap.get(k)?.display || k;
+          const tag = tokenAnyTag.get(k) || null;
+          const chip = document.createElement("div");
+          chip.className = "token";
+          chip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(disp)}`;
+          chip.addEventListener("click", () => {
+            state.selectedTokenKey = k;
+            setActiveViewPill("word");
+            state.selectedSuggestions.clear();
+            beep("bubble");
+            renderFloating();
+            requestRender();
+          });
+          toks.appendChild(chip);
+        }
+        box.appendChild(toks);
+        return box;
+      };
+
+      floatingBody.appendChild(wrap);
+      floatingBody.appendChild(sec("Shared", shared));
+      floatingBody.appendChild(sec(`${MEMBERS[state.compareA].label} only`, aOnly));
+      floatingBody.appendChild(sec(`${MEMBERS[state.compareB].label} only`, bOnly));
+      return;
+    }
+
+    if (state.view === "list"){
+      const wrap = document.createElement("div");
+      wrap.className = "list";
+      wrap.innerHTML = `<h4>All buckets (ground truth)</h4>`;
+      const small = document.createElement("div");
+      small.className = "small";
+      small.textContent = "This is the verification view. Everything here is computed from tokens → exact member set.";
+      wrap.appendChild(small);
+
+      const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+      const masks = [...buckets.keys()].sort((a,b)=> bitCount(+b)-bitCount(+a));
+
+      for (const mask of masks){
+        const keys = buckets.get(mask);
+        const item = document.createElement("div");
+        item.className = "bucketItem";
+
+        const head = document.createElement("div");
+        head.className = "head";
+        const left = document.createElement("div");
+        left.innerHTML = `${makeMemberBadge(mask)} <span class="badge">${keys.length} tokens</span> <span class="badge">mask ${mask}</span>`;
+        const btn = document.createElement("button");
+        btn.textContent = "Select";
+        btn.addEventListener("click", () => {
+          state.selectedRegionMask = mask;
+          setActiveViewPill("region");
+          state.selectedSuggestions.clear();
+          beep("tick");
+          renderFloating();
+          requestRender();
+        });
+        head.appendChild(left); head.appendChild(btn);
+
+        const toks = document.createElement("div");
+        toks.className = "tokens";
+        for (const k of keys){
+          const disp = tokenMap.get(k).display;
+          const tag = tokenAnyTag.get(k) || null;
+          const chip = document.createElement("div");
+          chip.className = "token";
+          chip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(disp)}`;
+          chip.addEventListener("click", () => {
+            state.selectedTokenKey = k;
+            setActiveViewPill("word");
+            state.selectedSuggestions.clear();
+            beep("bubble");
+            renderFloating();
+            requestRender();
+          });
+          toks.appendChild(chip);
+        }
+
+        item.appendChild(head);
+        item.appendChild(toks);
+        wrap.appendChild(item);
+      }
+
+      floatingBody.appendChild(wrap);
+      return;
+    }
+  }
+
+  function openMemberPicker(suggestions, tag){
+    const modal = document.createElement("div");
+    modal.className = "list";
+    modal.style.marginTop = "10px";
+    modal.innerHTML = `<h4>Pick members to add suggestions</h4><div class="small">Adds missing suggestions only. Tag applied: #${escapeHtml(tag)}</div>`;
+    const grid = document.createElement("div");
+    grid.style.display = "grid";
+    grid.style.gridTemplateColumns = "1fr 1fr";
+    grid.style.gap = "8px";
+    grid.style.marginTop = "10px";
+
+    const checks = MEMBERS.map((m) => {
+      const row = document.createElement("div");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = false;
+      const txt = document.createElement("div");
+      txt.innerHTML = `<div style="font-size:12px"><span class="dot" style="background:${m.color}"></span> ${escapeHtml(m.label)}</div><div class="small">add to this person</div>`;
+      row.appendChild(cb); row.appendChild(txt);
+      grid.appendChild(row);
+      return cb;
+    });
+
+    const row = document.createElement("div");
+    row.className = "btnRow";
+    row.style.marginTop = "10px";
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "primary";
+    addBtn.textContent = "Add";
+    addBtn.addEventListener("click", () => {
+      const idxs = checks.map((c,i)=>c.checked?i:-1).filter(i=>i>=0);
+      if (!idxs.length){ beep("tick"); return; }
+      applySuggestionsToMembers(suggestions, idxs, tag);
+      statusEl.textContent = "suggestions added";
+      beep("bubble");
+      modal.remove();
+    });
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "ghost";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => { beep("tick"); modal.remove(); });
+
+    row.appendChild(addBtn); row.appendChild(cancelBtn);
+    modal.appendChild(grid); modal.appendChild(row);
+    floatingBody.appendChild(modal);
+    floatingBody.scrollTop = floatingBody.scrollHeight;
+  }
+
+  function openSinglePicker(suggestions, tag){
+    const modal = document.createElement("div");
+    modal.className = "list";
+    modal.style.marginTop = "10px";
+    modal.innerHTML = `<h4>Add suggestions to one member</h4><div class="small">Tag applied: #${escapeHtml(tag)}</div>`;
+
+    const sel = document.createElement("select");
+    sel.style.marginTop = "10px";
+    for (let i=0;i<MEMBERS.length;i++){
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = MEMBERS[i].label;
+      sel.appendChild(opt);
+    }
+
+    const row = document.createElement("div");
+    row.className = "btnRow";
+    row.style.marginTop = "10px";
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "primary";
+    addBtn.textContent = "Add";
+    addBtn.addEventListener("click", () => {
+      const idx = +sel.value;
+      applySuggestionsToMembers(suggestions, [idx], tag);
+      statusEl.textContent = "suggestions added";
+      beep("bubble");
+      modal.remove();
+    });
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "ghost";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => { beep("tick"); modal.remove(); });
+
+    row.appendChild(addBtn); row.appendChild(cancelBtn);
+    modal.appendChild(sel); modal.appendChild(row);
+    floatingBody.appendChild(modal);
+    floatingBody.scrollTop = floatingBody.scrollHeight;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  function renderBucketsPanel(){
+    const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+    const masks = [...buckets.keys()].sort((a,b)=> bitCount(+b)-bitCount(+a));
+
+    bucketsPanel.innerHTML = "";
+    for (const mask of masks){
+      const keys = buckets.get(mask);
+      const item = document.createElement("div");
+      item.className = "bucketItem";
+
+      const head = document.createElement("div");
+      head.className = "head";
+
+      const left = document.createElement("div");
+      left.innerHTML = `${makeMemberBadge(mask)} <span class="badge">${keys.length} tokens</span> <span class="badge">mask ${mask}</span>`;
+
+      const btn = document.createElement("button");
+      btn.textContent = "Inspect";
+      btn.addEventListener("click", () => {
+        state.selectedRegionMask = mask;
+        state.selectedTokenKey = null;
+        setActiveViewPill("region");
+        state.selectedSuggestions.clear();
+        beep("tick");
+        renderFloating();
+        requestRender();
+      });
+
+      head.appendChild(left);
+      head.appendChild(btn);
+
+      const toks = document.createElement("div");
+      toks.className = "tokens";
+      for (const k of keys){
+        const disp = tokenMap.get(k).display;
+        const tag = tokenAnyTag.get(k) || null;
+        const chip = document.createElement("div");
+        chip.className = "token";
+        chip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(disp)}`;
+        chip.addEventListener("click", () => {
+          state.selectedTokenKey = k;
+          state.selectedRegionMask = mask;
+          setActiveViewPill("word");
+          state.selectedSuggestions.clear();
+          beep("bubble");
+          renderFloating();
+          requestRender();
+        });
+        toks.appendChild(chip);
+      }
+
+      item.appendChild(head);
+      item.appendChild(toks);
+      bucketsPanel.appendChild(item);
+    }
+
+    bucketCountEl.textContent = `${buckets.size} buckets`;
+    tokenCountEl.textContent = `${tokenMap.size} tokens`;
+  }
+
+  function getSaveObject(){
+    return {
+      version: 5,
+      members: MEMBERS.map(m => ({ key:m.key, label:m.label, color:m.color })),
+      textByMember: state.textByMember,
+      settings: state.settings,
+      panZoom: { panX: state.panX, panY: state.panY, zoom: state.zoom },
+      ui: { view: state.view, selectedRegionMask: state.selectedRegionMask, selectedTokenKey: state.selectedTokenKey, compareA: state.compareA, compareB: state.compareB, zen: state.zen, analysisHidden: state.analysisHidden }
+    };
+  }
+
+  function saveJSON(){
+    const obj = getSaveObject();
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type:"application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "slopshop_venn_data_v4.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    beep("bubble");
+  }
+
+  function loadJSONFromFile(ev){
+    const f = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const obj = JSON.parse(String(reader.result || "{}"));
+        if (!obj || typeof obj !== "object" || !obj.textByMember) throw new Error("Bad JSON");
+        for (const m of MEMBERS) state.textByMember[m.key] = String(obj.textByMember[m.key] || "");
+        if (Array.isArray(obj.members)){
+          for (const mm of obj.members){
+            const found = MEMBERS.find(x => x.key === mm.key);
+            if (found && mm.color) found.color = String(mm.color);
+          }
+        }
+        if (obj.settings){
+          state.settings.bgMode = (obj.settings.bgMode || state.settings.bgMode);
+          state.settings.spacing = clamp(+obj.settings.spacing || state.settings.spacing, 140, 360);
+          state.settings.size = clamp(+obj.settings.size || state.settings.size, 170, 420);
+          state.settings.pull = clamp(+obj.settings.pull || state.settings.pull, 0, 1);
+          state.settings.opacity = clamp(+obj.settings.opacity || state.settings.opacity, 0.05, 0.70);
+          state.settings.textSize = clamp(+obj.settings.textSize || state.settings.textSize, 10, 18);
+          state.settings.maxLabels = clamp(+obj.settings.maxLabels || state.settings.maxLabels, 30, 420);
+          state.settings.cullLabels = (obj.settings.cullLabels ?? state.settings.cullLabels);
+          state.settings.focusSelection = (obj.settings.focusSelection ?? state.settings.focusSelection);
+        }
+        if (obj.panZoom){
+          state.panX = +obj.panZoom.panX || 0;
+          state.panY = +obj.panZoom.panY || 0;
+          state.zoom = clamp(+obj.panZoom.zoom || 1, 0.35, 2.8);
+        }
+        if (obj.ui){
+          state.view = obj.ui.view || state.view;
+          state.selectedRegionMask = obj.ui.selectedRegionMask ?? null;
+          state.selectedTokenKey = obj.ui.selectedTokenKey ?? null;
+          state.compareA = obj.ui.compareA ?? null;
+          state.compareB = obj.ui.compareB ?? null;
+          state.analysisHidden = !!obj.ui.analysisHidden;
+          setActiveViewPill(state.view);
+          // restore zen after UI created
+          if (obj.ui.zen) setZen(true); else setZen(false);
+          if (state.analysisHidden) floating.classList.add("hidden"); else floating.classList.remove("hidden");
+        }
+        state.selectedSuggestions.clear();
+        rebuildInputs();
+        applySettingsToUI();
+        beep("bubble");
+        statusEl.textContent = "loaded";
+        requestRender();
+      } catch(e){
+        statusEl.textContent = "load failed";
+        beep("tick");
+        alert("Couldn’t load JSON: " + e.message);
+      }
+    };
+    reader.readAsText(f);
+  }
+
+  function downloadPNG(){
+    const rect = stage.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const off = document.createElement("canvas");
+    off.width = Math.floor(rect.width * dpr);
+    off.height = Math.floor(rect.height * dpr);
+    const octx = off.getContext("2d");
+    octx.setTransform(dpr,0,0,dpr,0,0);
+
+    octx.clearRect(0,0,rect.width,rect.height);
+    if (state.settings.bgMode !== "transparent"){
+      const bg = (state.settings.bgMode==="light") ? "#ffffff" : "#0b0d10";
+      octx.fillStyle = bg;
+      octx.fillRect(0,0,rect.width,rect.height);
+    }
+
+    octx.save();
+    octx.translate(rect.width/2 + state.panX, rect.height/2 + state.panY);
+    octx.scale(state.zoom, state.zoom);
+
+    const { cx, cy, ellipses } = getEllipses();
+
+    for (const e of ellipses){
+      const col = e.member.color;
+      const op = state.settings.opacity;
+      octx.save();
+      octx.translate(e.x, e.y);
+      octx.rotate(e.rot);
+      octx.beginPath();
+      octx.ellipse(0,0,e.a,e.b,0,0,Math.PI*2);
+      octx.fillStyle = hexToRgba(col, op);
+      octx.fill();
+      octx.lineWidth = 1.1;
+      octx.strokeStyle = hexToRgba(col, Math.min(0.55, op*2.8));
+      octx.stroke();
+      octx.restore();
+    }
+
+    octx.save();
+    octx.font = `800 15px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+    octx.fillStyle = (state.settings.bgMode==="light") ? "rgba(12,17,23,.88)" : "rgba(231,237,245,.92)";
+    octx.fillText("Slop Shop", cx, cy);
+    octx.restore();
+
+    octx.save();
+    octx.font = `800 13px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+    for (const e of ellipses){
+      const ang = e.rot;
+      const lx = e.x + Math.cos(ang) * (e.a * 0.86);
+      const ly = e.y + Math.sin(ang) * (e.b * 0.86);
+      const text = e.member.label;
+      const tw = octx.measureText(text).width;
+      const padX = 12, pillH = 22;
+      const pillW = tw + padX*2 + 14;
+
+      roundedRect(octx, lx - pillW/2, ly - pillH/2, pillW, pillH, 999);
+      octx.fillStyle = (state.settings.bgMode==="light") ? "rgba(255,255,255,.72)" : "rgba(0,0,0,.24)";
+      octx.fill();
+      octx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.14)" : "rgba(255,255,255,.12)";
+      octx.lineWidth = 1;
+      octx.stroke();
+
+      octx.beginPath();
+      octx.arc(lx - pillW/2 + 12, ly, 4.6, 0, Math.PI*2);
+      octx.fillStyle = e.member.color; octx.fill();
+      octx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.18)";
+      octx.lineWidth = 1; octx.stroke();
+
+      octx.fillStyle = (state.settings.bgMode==="light") ? "rgba(12,17,23,.88)" : hexToRgba(e.member.color, 0.95);
+      octx.fillText(text, lx + 6, ly);
+    }
+    octx.restore();
+
+    const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+    const textSize = state.settings.textSize;
+    const placed = [];
+    const padding = 6;
+
+    octx.save();
+    octx.font = `600 ${textSize}px ${getComputedStyle(document.documentElement).getPropertyValue("--mono")}`;
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+
+    const masksSorted = [...buckets.keys()].sort((a,b)=> bitCount(+b) - bitCount(+a));
+    for (const mask of masksSorted){
+      const keys = buckets.get(mask);
+      const base = basePointForMask(mask);
+      let jitter = 0;
+      for (const k of keys){
+        const disp = tokenMap.get(k).display;
+        const seed = hash(disp);
+        const ang = (seed % 6283)/1000;
+        const rad = 10 + (seed % 97);
+        const bx = base.x + Math.cos(ang)*(rad*0.4 + jitter);
+        const by = base.y + Math.sin(ang)*(rad*0.4 + jitter);
+        const p = findPointForMask(mask, bx, by);
+
+        let x = p.x, y = p.y;
+        const wTok = octx.measureText(disp).width;
+        for (let tries=0; tries<30; tries++){
+          const rect2 = { x: x - wTok/2 - padding, y: y - textSize/2 - padding, w: wTok + padding*2, h: textSize + padding*2 };
+          if (!intersectsAny(rect2, placed)){ placed.push(rect2); break; }
+          const tt = tries*0.8;
+          x += Math.cos(ang+tt)*3;
+          y += Math.sin(ang+tt)*3;
+        }
+
+        const mix = mixMaskColor(mask);
+        const baseTextColor = (state.settings.bgMode==="light") ? "rgba(12,17,23,.86)" : hexToRgba(mix, 0.92);
+        octx.fillStyle = baseTextColor;
+        octx.fillText(disp, x, y);
+
+        const tag = tokenAnyTag.get(k) || null;
+        if (tag){
+          octx.beginPath();
+          octx.arc(x + wTok/2 + 8, y, 3.6, 0, Math.PI*2);
+          octx.fillStyle = tagColor(tag);
+          octx.fill();
+          octx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.18)";
+          octx.lineWidth = 1;
+          octx.stroke();
+        }
+        jitter += 2;
+      }
+    }
+    octx.restore();
+    octx.restore();
+
+    const url = off.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (state.settings.bgMode==="transparent") ? "slopshop_venn_transparent.png"
+             : (state.settings.bgMode==="light") ? "slopshop_venn_white.png"
+             : "slopshop_venn_dark.png";
+    a.click();
+    beep("bubble");
+  }
+
+  let audioCtx = null;
+  function beep(type="tick", gain=0.18){
+    try{
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = audioCtx.currentTime;
+
+      const o1 = audioCtx.createOscillator();
+      const o2 = audioCtx.createOscillator();
+      const g  = audioCtx.createGain();
+
+      const f1 = type==="bubble" ? 540 : 980;
+      const f2 = type==="bubble" ? 320 : 660;
+
+      o1.type = "sine";
+      o2.type = "triangle";
+      o1.frequency.setValueAtTime(f1, t0);
+      o2.frequency.setValueAtTime(f2, t0);
+
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + (type==="bubble" ? 0.14 : 0.07));
+
+      if (type==="bubble"){
+        o1.frequency.exponentialRampToValueAtTime(f1*0.78, t0 + 0.14);
+        o2.frequency.exponentialRampToValueAtTime(f2*0.72, t0 + 0.14);
+      }
+
+      o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+      o1.start(t0); o2.start(t0);
+      o1.stop(t0 + 0.16); o2.stop(t0 + 0.16);
+    } catch {}
+  }
+
+  function boot(){
+    rebuildInputs();
+    applySettingsToUI();
+    resize();
+    renderBucketsPanel();
+    renderFloating();
+    requestRender();
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
