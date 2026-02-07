@@ -1,0 +1,1557 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Slop Shop — 6-Member Venn-ish Overlap Mapper</title>
+  <style>
+    :root{
+      --bg:#0b0d10;
+      --panel:#0f141a;
+      --panel2:#0c1016;
+      --text:#e7edf5;
+      --muted:#9aa8b7;
+      --border:rgba(255,255,255,.10);
+      --border2:rgba(255,255,255,.18);
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --radius: 14px;
+      --accent:#b7c7ff;
+    }
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:var(--bg);
+      color:var(--text);
+      overflow:hidden;
+    }
+    .app{
+      position:fixed; inset:0;
+      display:grid;
+      grid-template-columns: 360px 1fr 360px;
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    .panel{
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .panelHeader{
+      padding:12px 12px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      user-select:none;
+    }
+    .panelHeader .title{
+      font-weight:700;
+      letter-spacing:.2px;
+      font-size:14px;
+    }
+    .panelHeader .sub{
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--muted);
+      margin-top:2px;
+    }
+    .panelBody{
+      padding: 12px;
+      overflow:auto;
+      min-height:0;
+    }
+    .btnRow{
+      display:flex; gap:8px; flex-wrap:wrap;
+    }
+    button, .chip{
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size:12px;
+      font-family:var(--font);
+      cursor:pointer;
+      transition: transform .05s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    button:hover{ background: rgba(255,255,255,.09); border-color: var(--border2); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: rgba(183,199,255,.16);
+      border-color: rgba(183,199,255,.28);
+    }
+    button.danger{
+      background: rgba(255,120,120,.12);
+      border-color: rgba(255,120,120,.22);
+    }
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      padding:8px 10px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background: rgba(255,255,255,.04);
+    }
+    .toggle input{ accent-color: var(--accent); }
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:block;
+      margin-bottom:6px;
+      font-family:var(--mono);
+    }
+    textarea{
+      width:100%;
+      min-height: 88px;
+      resize: vertical;
+      box-sizing:border-box;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.22);
+      color:var(--text);
+      outline:none;
+      font-family:var(--mono);
+      font-size:12px;
+      line-height:1.25rem;
+    }
+    textarea:focus{ border-color: rgba(183,199,255,.28); }
+    .hint{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:6px;
+      line-height:1.25rem;
+    }
+    .kv{
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      gap:6px 10px;
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--muted);
+      margin: 8px 0 0;
+    }
+    .kv b{ color: var(--text); font-weight:600; }
+    .sliderRow{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:8px;
+      margin-top:10px;
+    }
+    .slider{
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background: rgba(255,255,255,.04);
+    }
+    .sliderTop{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      margin-bottom:8px;
+      font-size:12px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+    input[type="range"]{
+      width:100%;
+      accent-color: var(--accent);
+    }
+    .stage{
+      background: rgba(255,255,255,.02);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      position:relative;
+      min-height:0;
+    }
+    canvas{ display:block; width:100%; height:100%; }
+    .floating{
+      position:absolute;
+      left: 18px; top: 18px;
+      width: 420px;
+      max-width: min(520px, 90vw);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15,20,26,.92), rgba(12,16,22,.88));
+      border:1px solid var(--border);
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+      z-index: 10;
+    }
+    .floating.hidden{ display:none; }
+    .floatingHeader{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+      user-select:none;
+      cursor:grab;
+    }
+    .floatingHeader:active{ cursor:grabbing; }
+    .floatingHeader .name{
+      font-size:13px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .floatingHeader .mini{
+      font-size:11px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+    .floatingBody{
+      padding: 10px 12px 12px;
+      max-height: min(68vh, 700px);
+      overflow:auto;
+    }
+    .pillRow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .pill{
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      padding: 6px 10px;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .pill.active{
+      background: rgba(183,199,255,.16);
+      border-color: rgba(183,199,255,.28);
+    }
+    .list{
+      border:1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(0,0,0,.18);
+      padding: 10px;
+      margin-top:10px;
+    }
+    .list h4{
+      margin:0 0 8px 0;
+      font-size:12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-weight:600;
+    }
+    .tokens{
+      display:flex; flex-wrap:wrap; gap:6px;
+    }
+    .token{
+      font-family: var(--mono);
+      font-size:11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      user-select:text;
+      cursor:text;
+    }
+    .small{
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.25rem;
+    }
+    .rightPanel .panelBody{ padding-top:10px; }
+    .bucketItem{
+      padding:10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      margin-bottom:10px;
+    }
+    .bucketItem .head{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-bottom:6px;
+    }
+    .badge{
+      font-family: var(--mono);
+      font-size:11px;
+      color: var(--muted);
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      padding:4px 8px;
+      border-radius:999px;
+    }
+    .foot{
+      padding:10px 12px;
+      border-top:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:11px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="panel">
+    <div class="panelHeader">
+      <div>
+        <div class="title">Data Entry</div>
+        <div class="sub">newline / comma separated tokens • exact overlap logic</div>
+      </div>
+      <div class="btnRow">
+        <button class="primary" id="smartPresetBtn">Smart presets</button>
+        <button id="recenterBtn">Recenter</button>
+      </div>
+    </div>
+    <div class="panelBody" id="entryPanel">
+      <div class="grid2" id="inputsGrid"></div>
+
+      <div style="height:10px"></div>
+
+      <div class="btnRow">
+        <button id="exportPngBtn">Download PNG</button>
+        <button id="saveJsonBtn">Save JSON</button>
+        <button id="loadJsonBtn">Load JSON</button>
+        <input id="loadJsonFile" type="file" accept="application/json" style="display:none" />
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="toggle">
+        <input type="checkbox" id="darkBgToggle" checked />
+        <div>
+          <div style="font-size:12px">Dark background</div>
+          <div class="small">If off → PNG export uses transparency.</div>
+        </div>
+      </div>
+
+      <div class="sliderRow">
+        <div class="slider">
+          <div class="sliderTop"><span>Petal spacing</span><span class="small" id="sSpacingVal"></span></div>
+          <input id="sSpacing" type="range" min="140" max="360" value="250" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Ellipse size</span><span class="small" id="sSizeVal"></span></div>
+          <input id="sSize" type="range" min="170" max="420" value="300" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Overlap pull (to center)</span><span class="small" id="sPullVal"></span></div>
+          <input id="sPull" type="range" min="0" max="100" value="60" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Ellipse opacity</span><span class="small" id="sOpacityVal"></span></div>
+          <input id="sOpacity" type="range" min="5" max="70" value="18" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Text size</span><span class="small" id="sTextVal"></span></div>
+          <input id="sText" type="range" min="10" max="18" value="12" />
+        </div>
+      </div>
+
+      <div class="hint">
+        Correctness rule: a token appears in exactly one bucket — the exact set of members that contain it.
+        No leaking across members.
+      </div>
+
+      <div class="kv">
+        <div>Click logic</div><b>click inside overlaps to inspect that exact bucket</b>
+        <div>Compare</div><b>click member labels in the diagram: A then B</b>
+        <div>Pan</div><b>drag empty space</b>
+        <div>Zoom</div><b>mousewheel / trackpad</b>
+      </div>
+    </div>
+    <div class="foot">
+      <div>Double-click floating box to hide/show</div>
+      <div id="status">ready</div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="c"></canvas>
+
+    <div class="floating" id="floating">
+      <div class="floatingHeader" id="floatingHeader" title="Drag • inertia after release • double-click box to hide/show">
+        <div>
+          <div class="name">Fact check / analysis</div>
+          <div class="mini" id="floatingMini">Click a region or pick two members</div>
+        </div>
+        <div class="pillRow">
+          <div class="pill active" data-view="region">Region</div>
+          <div class="pill" data-view="compare">Compare</div>
+          <div class="pill" data-view="list">List</div>
+          <div class="pill" data-view="suggest">Suggest</div>
+        </div>
+      </div>
+      <div class="floatingBody" id="floatingBody"></div>
+    </div>
+  </div>
+
+  <div class="panel rightPanel">
+    <div class="panelHeader">
+      <div>
+        <div class="title">Buckets</div>
+        <div class="sub">structured view for verification</div>
+      </div>
+      <div class="btnRow">
+        <button class="danger" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <div class="panelBody" id="bucketsPanel"></div>
+    <div class="foot">
+      <div id="bucketCount">0 buckets</div>
+      <div id="tokenCount">0 tokens</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const MEMBERS = [
+    { key:"pet",         label:"pet",         color:"#9bbcff" },
+    { key:"catsoup",     label:"catsoup",     color:"#a7ffcc" },
+    { key:"xe",          label:"xe",          color:"#ffd9a6" },
+    { key:"johnwow",     label:"johnwow",     color:"#ffb3da" },
+    { key:"bookie",      label:"bookie",      color:"#d5c3ff" },
+    { key:"kingcon2k11", label:"kingcon2k11", color:"#b6f3ff" },
+  ];
+
+  const state = {
+    textByMember: Object.fromEntries(MEMBERS.map(m => [m.key, ""])),
+    settings: { darkBg:true, spacing:250, size:300, pull:0.60, opacity:0.18, textSize:12 },
+    view:"region",
+    selectedRegionKey:null,
+    compareA:null, compareB:null,
+    panX:0, panY:0, zoom:1,
+  };
+
+  const canvas = document.getElementById("c");
+  const stage = document.getElementById("stage");
+  const ctx = canvas.getContext("2d");
+
+  const inputsGrid = document.getElementById("inputsGrid");
+  const bucketsPanel = document.getElementById("bucketsPanel");
+  const bucketCountEl = document.getElementById("bucketCount");
+  const tokenCountEl = document.getElementById("tokenCount");
+  const statusEl = document.getElementById("status");
+
+  const floating = document.getElementById("floating");
+  const floatingBody = document.getElementById("floatingBody");
+  const floatingMini = document.getElementById("floatingMini");
+  const floatingHeader = document.getElementById("floatingHeader");
+
+  const darkBgToggle = document.getElementById("darkBgToggle");
+  const sSpacing = document.getElementById("sSpacing");
+  const sSize = document.getElementById("sSize");
+  const sPull = document.getElementById("sPull");
+  const sOpacity = document.getElementById("sOpacity");
+  const sText = document.getElementById("sText");
+  const sSpacingVal = document.getElementById("sSpacingVal");
+  const sSizeVal = document.getElementById("sSizeVal");
+  const sPullVal = document.getElementById("sPullVal");
+  const sOpacityVal = document.getElementById("sOpacityVal");
+  const sTextVal = document.getElementById("sTextVal");
+
+  document.getElementById("recenterBtn").addEventListener("click", () => {
+    state.panX=0; state.panY=0; state.zoom=1;
+    beep("bubble"); requestRender();
+  });
+  document.getElementById("smartPresetBtn").addEventListener("click", () => {
+    state.settings.spacing=265; state.settings.size=320; state.settings.pull=0.64; state.settings.opacity=0.16; state.settings.textSize=12;
+    applySettingsToUI(); beep("bubble"); requestRender();
+  });
+  document.getElementById("exportPngBtn").addEventListener("click", downloadPNG);
+  document.getElementById("saveJsonBtn").addEventListener("click", saveJSON);
+  document.getElementById("loadJsonBtn").addEventListener("click", () => document.getElementById("loadJsonFile").click());
+  document.getElementById("loadJsonFile").addEventListener("change", loadJSONFromFile);
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    for (const m of MEMBERS) state.textByMember[m.key]="";
+    state.selectedRegionKey=null; state.compareA=null; state.compareB=null;
+    rebuildInputs(); beep("tick"); requestRender();
+  });
+
+  floatingHeader.querySelectorAll(".pill").forEach(p => {
+    p.addEventListener("click", () => {
+      floatingHeader.querySelectorAll(".pill").forEach(x => x.classList.remove("active"));
+      p.classList.add("active");
+      state.view = p.dataset.view;
+      beep("tick");
+      renderFloating();
+    });
+  });
+
+  floating.addEventListener("dblclick", () => { floating.classList.toggle("hidden"); beep("bubble"); });
+
+  function rebuildInputs(){
+    inputsGrid.innerHTML="";
+    for (const m of MEMBERS){
+      const wrap=document.createElement("div");
+      const lab=document.createElement("label"); lab.textContent=m.label;
+      const ta=document.createElement("textarea");
+      ta.placeholder="type tokens… (comma/newline)";
+      ta.value=state.textByMember[m.key]||"";
+      ta.addEventListener("input", () => { state.textByMember[m.key]=ta.value; statusEl.textContent="updated"; requestRender(); });
+      wrap.appendChild(lab); wrap.appendChild(ta);
+      inputsGrid.appendChild(wrap);
+    }
+  }
+  rebuildInputs();
+
+  function applySettingsToUI(){
+    darkBgToggle.checked=state.settings.darkBg;
+    sSpacing.value=state.settings.spacing;
+    sSize.value=state.settings.size;
+    sPull.value=Math.round(state.settings.pull*100);
+    sOpacity.value=Math.round(state.settings.opacity*100);
+    sText.value=state.settings.textSize;
+    sSpacingVal.textContent=state.settings.spacing;
+    sSizeVal.textContent=state.settings.size;
+    sPullVal.textContent=`${Math.round(state.settings.pull*100)}%`;
+    sOpacityVal.textContent=`${Math.round(state.settings.opacity*100)}%`;
+    sTextVal.textContent=`${state.settings.textSize}px`;
+  }
+  applySettingsToUI();
+
+  darkBgToggle.addEventListener("change", () => { state.settings.darkBg=darkBgToggle.checked; beep("bubble"); requestRender(); });
+
+  const sliderHooks = [
+    [sSpacing, (v)=>state.settings.spacing=+v],
+    [sSize, (v)=>state.settings.size=+v],
+    [sPull, (v)=>state.settings.pull=(+v)/100],
+    [sOpacity, (v)=>state.settings.opacity=(+v)/100],
+    [sText, (v)=>state.settings.textSize=+v],
+  ];
+  for (const [el,set] of sliderHooks){
+    el.addEventListener("input", () => { set(el.value); applySettingsToUI(); beep("tick",0.12); requestRender(); });
+  }
+
+  function normalizeToken(t){ return t.trim().replace(/\s+/g," "); }
+  function parseTokens(raw){
+    const parts = raw.split(/[\n,]+/g).map(s=>normalizeToken(s)).filter(Boolean);
+    const seen=new Map();
+    for (const p of parts){ const k=p.toLowerCase(); if(!seen.has(k)) seen.set(k,p); }
+    return [...seen.values()];
+  }
+
+  function buildBuckets(){
+    const tokenMap=new Map();
+    for (let i=0;i<MEMBERS.length;i++){
+      const m=MEMBERS[i];
+      const tokens=parseTokens(state.textByMember[m.key]||"");
+      for (const tok of tokens){
+        const k=tok.toLowerCase();
+        const bit=(1<<i);
+        if(!tokenMap.has(k)) tokenMap.set(k,{display:tok, mask:bit});
+        else tokenMap.get(k).mask |= bit;
+      }
+    }
+    const buckets=new Map();
+    for (const {display, mask} of tokenMap.values()){
+      if(!buckets.has(mask)) buckets.set(mask,[]);
+      buckets.get(mask).push(display);
+    }
+    for (const [mask,arr] of buckets){
+      arr.sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:"base"}));
+      buckets.set(mask,arr);
+    }
+    return { tokenMap, buckets };
+  }
+
+  function maskToMembers(mask){
+    const list=[];
+    for (let i=0;i<MEMBERS.length;i++) if (mask & (1<<i)) list.push(MEMBERS[i].label);
+    return list;
+  }
+  function maskKey(mask){ return String(mask); }
+
+  function getEllipses(){
+    const cx=0, cy=0;
+    const R=state.settings.spacing;
+    const a=state.settings.size;
+    const b=state.settings.size*0.74;
+    const ellipses=[];
+    for (let i=0;i<MEMBERS.length;i++){
+      const ang=(-Math.PI/2)+i*(2*Math.PI/MEMBERS.length);
+      ellipses.push({ i, member:MEMBERS[i], x:cx+R*Math.cos(ang), y:cy+R*Math.sin(ang), a, b, rot:ang });
+    }
+    return { cx, cy, ellipses };
+  }
+
+  function pointInEllipse(px,py,e){
+    const dx=px-e.x, dy=py-e.y;
+    const cr=Math.cos(-e.rot), sr=Math.sin(-e.rot);
+    const lx=dx*cr - dy*sr;
+    const ly=dx*sr + dy*cr;
+    return (lx*lx)/(e.a*e.a) + (ly*ly)/(e.b*e.b) <= 1;
+  }
+
+  function hitTestRegion(worldX, worldY){
+    const { ellipses } = getEllipses();
+    let mask=0;
+    for (const e of ellipses) if (pointInEllipse(worldX, worldY, e)) mask |= (1<<e.i);
+    return mask;
+  }
+
+  function findPointForMask(mask, baseX, baseY){
+    const { ellipses }=getEllipses();
+    const inside=(x,y)=>{
+      for (const e of ellipses){
+        const pin=pointInEllipse(x,y,e);
+        const shouldIn=!!(mask & (1<<e.i));
+        if (shouldIn && !pin) return false;
+        if (!shouldIn && pin) return false;
+      }
+      return true;
+    };
+    if (inside(baseX, baseY)) return {x:baseX, y:baseY};
+    let r=0;
+    for (let k=0;k<1400;k++){
+      r+=0.22;
+      const t=k*0.55;
+      const x=baseX + Math.cos(t)*r*9;
+      const y=baseY + Math.sin(t)*r*9;
+      if (inside(x,y)) return {x,y};
+    }
+    return {x:baseX, y:baseY, fallback:true};
+  }
+
+  function basePointForMask(mask){
+    const { cx, cy, ellipses }=getEllipses();
+    const ids=[];
+    for (let i=0;i<MEMBERS.length;i++) if (mask & (1<<i)) ids.push(i);
+    if (!ids.length) return {x:cx,y:cy};
+    let vx=0,vy=0;
+    for (const id of ids){ vx+=ellipses[id].x; vy+=ellipses[id].y; }
+    vx/=ids.length; vy/=ids.length;
+    const k=ids.length;
+    const pull=state.settings.pull;
+    const sharePull=Math.min(1, pull*(k>=3?1.25:(k===2?1.0:0.6)));
+    return { x: vx*(1-sharePull)+cx*sharePull, y: vy*(1-sharePull)+cy*sharePull };
+  }
+
+  let needsRender=true;
+  let raf=null;
+  function requestRender(){ needsRender=true; if(!raf) raf=requestAnimationFrame(tick); }
+  function resize(){
+    const r=stage.getBoundingClientRect();
+    const dpr=Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    canvas.width=Math.floor(r.width*dpr);
+    canvas.height=Math.floor(r.height*dpr);
+    canvas.style.width=r.width+"px";
+    canvas.style.height=r.height+"px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    requestRender();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function tick(){ raf=null; if(needsRender) render(); }
+
+  const currentHit = { labelHit: [] };
+
+  function render(){
+    needsRender=false;
+    const w=canvas.clientWidth, h=canvas.clientHeight;
+
+    ctx.clearRect(0,0,w,h);
+    if (state.settings.darkBg){
+      const bg=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0b0d10";
+      ctx.fillStyle=bg;
+      ctx.fillRect(0,0,w,h);
+    }
+
+    ctx.save();
+    ctx.translate(w/2 + state.panX, h/2 + state.panY);
+    ctx.scale(state.zoom, state.zoom);
+
+    const { cx, cy, ellipses }=getEllipses();
+
+    for (const e of ellipses){
+      const col=e.member.color;
+      const op=state.settings.opacity;
+      ctx.save();
+      ctx.translate(e.x,e.y);
+      ctx.rotate(e.rot);
+      ctx.beginPath();
+      ctx.ellipse(0,0,e.a,e.b,0,0,Math.PI*2);
+      ctx.fillStyle=hexToRgba(col, op);
+      ctx.fill();
+      ctx.lineWidth=1.1;
+      ctx.strokeStyle=hexToRgba(col, Math.min(0.55, op*2.8));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.font=`700 15px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillStyle="rgba(231,237,245,.92)";
+    ctx.fillText("Slop Shop", cx, cy);
+    ctx.restore();
+
+    const labelHit=[];
+    ctx.save();
+    ctx.font=`700 13px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    for (const e of ellipses){
+      const ang=e.rot;
+      const lx=e.x + Math.cos(ang)*(e.a*0.86);
+      const ly=e.y + Math.sin(ang)*(e.b*0.86);
+      const isSelected=(state.compareA===e.i || state.compareB===e.i);
+      const bg=isSelected ? "rgba(183,199,255,.20)" : "rgba(0,0,0,.24)";
+      const br=isSelected ? "rgba(183,199,255,.30)" : "rgba(255,255,255,.12)";
+      const padX=10;
+      const text=e.member.label;
+      const tw=ctx.measureText(text).width;
+
+      const x=lx, y=ly;
+      roundedRect(ctx, x - tw/2 - padX, y - 10, tw + padX*2, 20, 999);
+      ctx.fillStyle=bg; ctx.fill();
+      ctx.strokeStyle=br; ctx.lineWidth=1; ctx.stroke();
+
+      ctx.fillStyle=hexToRgba(e.member.color, 0.95);
+      ctx.fillText(text, x, y);
+
+      labelHit.push({ i:e.i, x:x - tw/2 - padX, y:y - 10, w:tw + padX*2, h:20 });
+    }
+    ctx.restore();
+
+    const { buckets }=buildBuckets();
+    const textSize=state.settings.textSize;
+
+    ctx.save();
+    ctx.font=`500 ${textSize}px ${getComputedStyle(document.documentElement).getPropertyValue("--mono")}`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+
+    const placed=[];
+    const padding=6;
+    const masksSorted=[...buckets.keys()].sort((a,b)=>bitCount(+b)-bitCount(+a));
+
+    for (const mask of masksSorted){
+      const tokens=buckets.get(mask);
+      const base=basePointForMask(mask);
+      let jitter=0;
+      for (const tok of tokens){
+        const seed=hash(tok);
+        const ang=(seed%6283)/1000;
+        const rad=10 + (seed%97);
+        const bx=base.x + Math.cos(ang)*(rad*0.4 + jitter);
+        const by=base.y + Math.sin(ang)*(rad*0.4 + jitter);
+        const p=findPointForMask(mask, bx, by);
+
+        let x=p.x, y=p.y;
+        for (let tries=0;tries<30;tries++){
+          const wTok=ctx.measureText(tok).width;
+          const rect={ x:x - wTok/2 - padding, y:y - textSize/2 - padding, w:wTok + padding*2, h:textSize + padding*2 };
+          if(!intersectsAny(rect, placed)){ placed.push(rect); break; }
+          const t=tries*0.8;
+          x += Math.cos(ang+t)*3;
+          y += Math.sin(ang+t)*3;
+        }
+
+        const mix=mixMaskColor(mask);
+        ctx.fillStyle=hexToRgba(mix, 0.92);
+        ctx.fillText(tok, x, y);
+
+        if (p.fallback){
+          ctx.strokeStyle="rgba(255,120,120,.55)";
+          ctx.lineWidth=1;
+          const wTok=ctx.measureText(tok).width;
+          ctx.beginPath();
+          ctx.moveTo(x - wTok/2, y + textSize*0.62);
+          ctx.lineTo(x + wTok/2, y + textSize*0.62);
+          ctx.stroke();
+        }
+        jitter+=2;
+      }
+    }
+    ctx.restore();
+
+    if (state.selectedRegionKey != null){
+      const mask=+state.selectedRegionKey;
+      if (mask !== 0){
+        ctx.save();
+        ctx.lineWidth=2.2;
+        ctx.setLineDash([6,6]);
+        const col=mixMaskColor(mask);
+        ctx.strokeStyle=hexToRgba(col, 0.65);
+        for (const e of ellipses){
+          if (mask & (1<<e.i)){
+            ctx.save();
+            ctx.translate(e.x,e.y);
+            ctx.rotate(e.rot);
+            ctx.beginPath();
+            ctx.ellipse(0,0,e.a,e.b,0,0,Math.PI*2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        ctx.restore();
+      }
+    }
+
+    ctx.restore(); // world
+
+    currentHit.labelHit = labelHit.map(r => worldRectToScreen(r));
+  }
+
+  function worldRectToScreen(r){
+    const w=canvas.clientWidth, h=canvas.clientHeight;
+    const x=(r.x*state.zoom) + (w/2 + state.panX);
+    const y=(r.y*state.zoom) + (h/2 + state.panY);
+    return { ...r, x, y, w:r.w*state.zoom, h:r.h*state.zoom };
+  }
+
+  function roundedRect(ctx,x,y,w,h,r){
+    const rr=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+  function intersectsAny(a, arr){
+    for (const b of arr){
+      if (a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y) return true;
+    }
+    return false;
+  }
+  function bitCount(n){ n=n>>>0; let c=0; while(n){ n&=(n-1); c++; } return c; }
+  function mixMaskColor(mask){
+    let r=0,g=0,b=0,c=0;
+    for (let i=0;i<MEMBERS.length;i++){
+      if (mask & (1<<i)){
+        const rgb=hexToRgb(MEMBERS[i].color);
+        r+=rgb.r; g+=rgb.g; b+=rgb.b; c++;
+      }
+    }
+    if(!c) return "#e7edf5";
+    r=Math.round(r/c); g=Math.round(g/c); b=Math.round(b/c);
+    return rgbToHex(r,g,b);
+  }
+  function hexToRgb(hex){
+    const h=hex.replace("#","").trim();
+    const n=parseInt(h.length===3 ? h.split("").map(x=>x+x).join("") : h, 16);
+    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+  }
+  function rgbToHex(r,g,b){ return "#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+  function hexToRgba(hex,a){ const {r,g,b}=hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+  function hash(str){
+    let h=2166136261;
+    for (let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+    return (h>>>0);
+  }
+
+  function screenToWorld(sx,sy){
+    const w=canvas.clientWidth, h=canvas.clientHeight;
+    return { x:(sx - (w/2 + state.panX))/state.zoom, y:(sy - (h/2 + state.panY))/state.zoom };
+  }
+
+  let isPanning=false;
+  let last=null;
+
+  canvas.addEventListener("pointerdown", (ev) => {
+    canvas.setPointerCapture(ev.pointerId);
+    const rect=stage.getBoundingClientRect();
+    const sx=ev.clientX-rect.left;
+    const sy=ev.clientY-rect.top;
+
+    const hit=currentHit.labelHit.find(r => sx>=r.x && sx<=r.x+r.w && sy>=r.y && sy<=r.y+r.h);
+    if (hit){
+      if (state.compareA==null || (state.compareA!=null && state.compareB!=null)){
+        state.compareA=hit.i; state.compareB=null;
+      } else if (state.compareA!=null && state.compareB==null){
+        if (hit.i===state.compareA) state.compareA=null;
+        else state.compareB=hit.i;
+      }
+      state.view="compare";
+      setActiveViewPill("compare");
+      beep("bubble");
+      renderFloating();
+      requestRender();
+      return;
+    }
+
+    const p=screenToWorld(sx,sy);
+    const mask=hitTestRegion(p.x,p.y);
+    if (mask!==0){
+      state.selectedRegionKey=maskKey(mask);
+      state.view="region";
+      setActiveViewPill("region");
+      beep("tick");
+      renderFloating();
+      renderBucketsPanel();
+      requestRender();
+      return;
+    }
+
+    isPanning=true;
+    last={ x:ev.clientX, y:ev.clientY };
+  });
+
+  canvas.addEventListener("pointermove", (ev) => {
+    if(!isPanning) return;
+    const dx=ev.clientX-last.x;
+    const dy=ev.clientY-last.y;
+    state.panX += dx;
+    state.panY += dy;
+    last={ x:ev.clientX, y:ev.clientY };
+    requestRender();
+  });
+
+  canvas.addEventListener("pointerup", () => { isPanning=false; });
+
+  canvas.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const delta=-ev.deltaY;
+    const factor=Math.exp(delta*0.0012);
+    const old=state.zoom;
+    const next=clamp(old*factor, 0.35, 2.8);
+
+    const rect=stage.getBoundingClientRect();
+    const sx=ev.clientX-rect.left;
+    const sy=ev.clientY-rect.top;
+
+    const worldBefore=screenToWorld(sx,sy);
+    state.zoom=next;
+    const worldAfter=screenToWorld(sx,sy);
+
+    const dx=(worldAfter.x-worldBefore.x)*state.zoom;
+    const dy=(worldAfter.y-worldBefore.y)*state.zoom;
+    state.panX += dx;
+    state.panY += dy;
+
+    requestRender();
+  }, {passive:false});
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  let menuDrag=null;
+  floatingHeader.addEventListener("pointerdown", (ev) => {
+    if (floating.classList.contains("hidden")) return;
+    floatingHeader.setPointerCapture(ev.pointerId);
+    const r=floating.getBoundingClientRect();
+    menuDrag={ startX:ev.clientX, startY:ev.clientY, origX:r.left, origY:r.top, vx:0, vy:0, lastX:ev.clientX, lastY:ev.clientY, lastT:performance.now() };
+  });
+  window.addEventListener("pointermove", (ev) => {
+    if(!menuDrag) return;
+    const dx=ev.clientX-menuDrag.startX;
+    const dy=ev.clientY-menuDrag.startY;
+
+    const now=performance.now();
+    const dt=Math.max(1, now - menuDrag.lastT);
+    menuDrag.vx=(ev.clientX-menuDrag.lastX)/dt;
+    menuDrag.vy=(ev.clientY-menuDrag.lastY)/dt;
+    menuDrag.lastX=ev.clientX; menuDrag.lastY=ev.clientY; menuDrag.lastT=now;
+
+    setFloatingPos(menuDrag.origX + dx, menuDrag.origY + dy);
+  });
+  window.addEventListener("pointerup", () => {
+    if(!menuDrag) return;
+    const vx=menuDrag.vx, vy=menuDrag.vy;
+    menuDrag=null;
+
+    const friction=0.92;
+    let ivx=vx*26, ivy=vy*26;
+    let lastT=performance.now();
+    const step=() => {
+      const now=performance.now();
+      const dt=Math.min(32, now-lastT);
+      lastT=now;
+      const r=floating.getBoundingClientRect();
+      setFloatingPos(r.left + ivx*dt, r.top + ivy*dt);
+      ivx *= Math.pow(friction, dt/16);
+      ivy *= Math.pow(friction, dt/16);
+      if (Math.abs(ivx)+Math.abs(ivy) > 0.02) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+
+  function setFloatingPos(x,y){
+    const st=stage.getBoundingClientRect();
+    const r=floating.getBoundingClientRect();
+    const minX=st.left+8, minY=st.top+8, maxX=st.right-r.width-8, maxY=st.bottom-r.height-8;
+    const nx=clamp(x,minX,maxX);
+    const ny=clamp(y,minY,maxY);
+    floating.style.left=(nx - st.left)+"px";
+    floating.style.top=(ny - st.top)+"px";
+    floating.style.position="absolute";
+  }
+
+  function setActiveViewPill(view){
+    floatingHeader.querySelectorAll(".pill").forEach(x => x.classList.toggle("active", x.dataset.view===view));
+    state.view=view;
+  }
+
+  function renderFloating(){
+    const { tokenMap, buckets }=buildBuckets();
+    const totalTokens=tokenMap.size;
+
+    if (state.view==="region"){
+      if (state.selectedRegionKey==null) floatingMini.textContent="Click any overlap region to inspect its exact bucket";
+      else{
+        const mask=+state.selectedRegionKey;
+        const mems=maskToMembers(mask);
+        floatingMini.textContent=`Bucket: ${mems.join(" ∩ ")} (${mems.length} member${mems.length===1?"":"s"})`;
+      }
+    } else if (state.view==="compare"){
+      if (state.compareA==null) floatingMini.textContent="Click two member labels in the diagram";
+      else if (state.compareB==null) floatingMini.textContent=`Selected A: ${MEMBERS[state.compareA].label} — pick B`;
+      else floatingMini.textContent=`Compare: ${MEMBERS[state.compareA].label} vs ${MEMBERS[state.compareB].label}`;
+    } else if (state.view==="list"){
+      floatingMini.textContent=`Structured verification • ${buckets.size} buckets • ${totalTokens} unique tokens`;
+    } else if (state.view==="suggest"){
+      floatingMini.textContent="Suggest: expand tokens into related domains (you choose what to add)";
+    }
+
+    floatingBody.innerHTML="";
+
+    if (state.view==="region"){
+      const box=document.createElement("div");
+      box.className="list";
+      const h=document.createElement("h4"); h.textContent="Exact overlap bucket";
+      box.appendChild(h);
+
+      const mask=state.selectedRegionKey==null ? 0 : +state.selectedRegionKey;
+      const mems=maskToMembers(mask);
+      const info=document.createElement("div");
+      info.className="small";
+      info.innerHTML = mask===0
+        ? "No region selected yet. Click inside an overlap area on the diagram."
+        : `<span class="badge">${mems.join(" ∩ ")}</span> <span class="badge">mask ${mask}</span>`;
+      box.appendChild(info);
+
+      const toks=document.createElement("div");
+      toks.className="tokens";
+      const arr=buckets.get(mask)||[];
+      if (mask!==0 && arr.length===0){
+        const s=document.createElement("div");
+        s.className="small";
+        s.style.marginTop="10px";
+        s.textContent="This region currently has 0 tokens.";
+        box.appendChild(s);
+      } else if (mask!==0){
+        for (const t of arr){
+          const chip=document.createElement("div");
+          chip.className="token";
+          chip.textContent=t;
+          toks.appendChild(chip);
+        }
+        toks.style.marginTop="10px";
+        box.appendChild(toks);
+      }
+      floatingBody.appendChild(box);
+    }
+
+    if (state.view==="compare"){
+      const wrap=document.createElement("div");
+      wrap.className="list";
+      const h=document.createElement("h4"); h.textContent="Comparison output";
+      wrap.appendChild(h);
+
+      if (state.compareA==null || state.compareB==null){
+        const s=document.createElement("div");
+        s.className="small";
+        s.textContent="Click member label A then B in the diagram to generate shared / A-only / B-only lists.";
+        wrap.appendChild(s);
+        floatingBody.appendChild(wrap);
+      } else {
+        const aKey=MEMBERS[state.compareA].key;
+        const bKey=MEMBERS[state.compareB].key;
+
+        const aTokens=new Set(parseTokens(state.textByMember[aKey]||"").map(x=>x.toLowerCase()));
+        const bTokens=new Set(parseTokens(state.textByMember[bKey]||"").map(x=>x.toLowerCase()));
+
+        const shared=[], aOnly=[], bOnly=[];
+        for (const k of aTokens){
+          if (bTokens.has(k)) shared.push(tokenMap.get(k)?.display || k);
+          else aOnly.push(tokenMap.get(k)?.display || k);
+        }
+        for (const k of bTokens){
+          if (!aTokens.has(k)) bOnly.push(tokenMap.get(k)?.display || k);
+        }
+
+        const header=document.createElement("div");
+        header.className="small";
+        header.innerHTML=`<span class="badge">${MEMBERS[state.compareA].label}</span> vs <span class="badge">${MEMBERS[state.compareB].label}</span>`;
+        wrap.appendChild(header);
+
+        const sec=(title, arr) => {
+          const box=document.createElement("div");
+          box.className="list";
+          box.style.marginTop="10px";
+          const hh=document.createElement("h4");
+          hh.textContent=title+` (${arr.length})`;
+          box.appendChild(hh);
+          const toks=document.createElement("div");
+          toks.className="tokens";
+          for (const t of arr.sort((x,y)=>x.localeCompare(y,undefined,{sensitivity:"base"}))){
+            const chip=document.createElement("div");
+            chip.className="token";
+            chip.textContent=t;
+            toks.appendChild(chip);
+          }
+          box.appendChild(toks);
+          return box;
+        };
+
+        floatingBody.appendChild(wrap);
+        floatingBody.appendChild(sec("Shared", shared));
+        floatingBody.appendChild(sec(`${MEMBERS[state.compareA].label} only`, aOnly));
+        floatingBody.appendChild(sec(`${MEMBERS[state.compareB].label} only`, bOnly));
+      }
+    }
+
+    if (state.view==="list"){
+      const wrap=document.createElement("div");
+      wrap.className="list";
+      const h=document.createElement("h4"); h.textContent="All buckets (exact sets)";
+      wrap.appendChild(h);
+
+      const masks=[...buckets.keys()].sort((a,b)=>bitCount(+b)-bitCount(+a));
+      const small=document.createElement("div");
+      small.className="small";
+      small.textContent="This is the ground truth list view to verify correctness.";
+      wrap.appendChild(small);
+
+      const list=document.createElement("div");
+      list.style.marginTop="10px";
+
+      for (const mask of masks){
+        const mems=maskToMembers(mask);
+        const item=document.createElement("div");
+        item.className="bucketItem";
+        const head=document.createElement("div");
+        head.className="head";
+        const left=document.createElement("div");
+        left.innerHTML=`<span class="badge">${mems.join(" ∩ ")}</span> <span class="badge">${buckets.get(mask).length} tokens</span>`;
+        const right=document.createElement("button");
+        right.textContent="Select";
+        right.addEventListener("click", () => {
+          state.selectedRegionKey=maskKey(mask);
+          setActiveViewPill("region");
+          beep("tick");
+          renderFloating();
+          renderBucketsPanel();
+          requestRender();
+        });
+        head.appendChild(left); head.appendChild(right);
+
+        const toks=document.createElement("div");
+        toks.className="tokens";
+        for (const t of buckets.get(mask)){
+          const chip=document.createElement("div");
+          chip.className="token";
+          chip.textContent=t;
+          toks.appendChild(chip);
+        }
+
+        item.appendChild(head);
+        item.appendChild(toks);
+        list.appendChild(item);
+      }
+      wrap.appendChild(list);
+      floatingBody.appendChild(wrap);
+    }
+
+    if (state.view==="suggest"){
+      floatingBody.appendChild(renderSuggestUI());
+    }
+  }
+
+  const SUGGEST_RULES=[
+    { match:(t)=>/edit|editing|editor|post/.test(t), out:["film industry","post-production","cutting room","deliverables","client notes","versioning"] },
+    { match:(t)=>/clean/.test(t) && /edit|editing|post/.test(t), out:["commercial/industry style","broadcast polish","brand-safe","tight pacing"] },
+    { match:(t)=>/ai|neural|model|gen/.test(t), out:["pipeline","dataset curation","iteration","style control","post-processing"] },
+    { match:(t)=>/projection|stage|live/.test(t), out:["tour visuals","media server","mapping","sync","lighting integration"] },
+    { match:(t)=>/sound|mix|audio/.test(t), out:["post audio","mix notes","loudness","stems","deliverable specs"] },
+  ];
+
+  function collectCurrentTokens(){
+    const byMember=MEMBERS.map(m=>parseTokens(state.textByMember[m.key]||""));
+    const all=new Set();
+    for (const arr of byMember) for (const t of arr) all.add(t);
+    return [...all];
+  }
+  function suggestForToken(tok){
+    const t=tok.toLowerCase();
+    const out=new Set();
+    for (const r of SUGGEST_RULES) if (r.match(t)) for (const s of r.out) out.add(s);
+    if (/\bbrand\b/.test(t)) ["guidelines","brand system","asset library"].forEach(x=>out.add(x));
+    if (/\bworkflow\b/.test(t)) ["handoff","checklists","QA"].forEach(x=>out.add(x));
+    return [...out];
+  }
+
+  function renderSuggestUI(){
+    const wrap=document.createElement("div");
+    wrap.className="list";
+    const h=document.createElement("h4"); h.textContent="Smart word suggestor";
+    wrap.appendChild(h);
+    const s=document.createElement("div");
+    s.className="small";
+    s.textContent="Pick a token, then choose which members should receive the suggested expansions.";
+    wrap.appendChild(s);
+
+    const tokens=collectCurrentTokens().sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:"base"}));
+    const select=document.createElement("select");
+    select.style.width="100%";
+    select.style.marginTop="10px";
+    select.style.padding="10px";
+    select.style.borderRadius="12px";
+    select.style.border="1px solid var(--border)";
+    select.style.background="rgba(0,0,0,.22)";
+    select.style.color="var(--text)";
+    select.style.fontFamily="var(--mono)";
+    select.innerHTML = `<option value="">(choose a token)</option>` + tokens.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+    wrap.appendChild(select);
+
+    const membersBox=document.createElement("div");
+    membersBox.style.marginTop="10px";
+    membersBox.style.display="grid";
+    membersBox.style.gridTemplateColumns="1fr 1fr";
+    membersBox.style.gap="8px";
+
+    const checks = MEMBERS.map((m, idx) => {
+      const row=document.createElement("div");
+      row.className="toggle";
+      const cb=document.createElement("input");
+      cb.type="checkbox";
+      cb.checked=false;
+      const txt=document.createElement("div");
+      txt.innerHTML = `<div style="font-size:12px">${m.label}</div><div class="small">apply suggestions here</div>`;
+      row.appendChild(cb); row.appendChild(txt);
+      membersBox.appendChild(row);
+      return cb;
+    });
+    wrap.appendChild(membersBox);
+
+    const outBox=document.createElement("div");
+    outBox.className="list";
+    outBox.style.marginTop="10px";
+    outBox.innerHTML = `<h4>Suggestions</h4><div class="small">No token selected yet.</div>`;
+    wrap.appendChild(outBox);
+
+    select.addEventListener("change", () => {
+      const tok=select.value;
+      if(!tok){
+        outBox.innerHTML = `<h4>Suggestions</h4><div class="small">No token selected yet.</div>`;
+        checks.forEach(c=>c.checked=false);
+        return;
+      }
+      const lower=tok.toLowerCase();
+      checks.forEach((cb, idx) => {
+        const mkey=MEMBERS[idx].key;
+        const set=new Set(parseTokens(state.textByMember[mkey]||"").map(x=>x.toLowerCase()));
+        cb.checked=set.has(lower);
+      });
+
+      const sug=suggestForToken(tok);
+      if(!sug.length){
+        outBox.innerHTML = `<h4>Suggestions</h4><div class="small">No rules matched this token yet. Add it to the rule list in code if you want.</div>`;
+        return;
+      }
+      const toks=document.createElement("div");
+      toks.className="tokens";
+      for (const item of sug){
+        const chip=document.createElement("div");
+        chip.className="token";
+        chip.textContent=item;
+        toks.appendChild(chip);
+      }
+
+      const btn=document.createElement("button");
+      btn.className="primary";
+      btn.style.marginTop="10px";
+      btn.textContent="Add selected suggestions → checked members";
+      btn.addEventListener("click", () => {
+        const targets=checks.map((cb,idx)=>cb.checked?idx:-1).filter(x=>x>=0);
+        if(!targets.length){ beep("tick"); return; }
+        for (const idx of targets){
+          const mkey=MEMBERS[idx].key;
+          const existing=new Set(parseTokens(state.textByMember[mkey]||"").map(x=>x.toLowerCase()));
+          const merged=parseTokens(state.textByMember[mkey]||"");
+          for (const item of sug){
+            if(!existing.has(item.toLowerCase())){
+              merged.push(item);
+              existing.add(item.toLowerCase());
+            }
+          }
+          state.textByMember[mkey]=merged.join("\n");
+        }
+        rebuildInputs();
+        beep("bubble");
+        requestRender();
+      });
+
+      outBox.innerHTML = `<h4>Suggestions</h4>`;
+      outBox.appendChild(toks);
+      outBox.appendChild(btn);
+    });
+
+    return wrap;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  function renderBucketsPanel(){
+    const { tokenMap, buckets }=buildBuckets();
+    const masks=[...buckets.keys()].sort((a,b)=>bitCount(+b)-bitCount(+a));
+    bucketsPanel.innerHTML="";
+    for (const mask of masks){
+      const mems=maskToMembers(mask);
+      const item=document.createElement("div");
+      item.className="bucketItem";
+      const head=document.createElement("div");
+      head.className="head";
+      const left=document.createElement("div");
+      left.innerHTML = `<span class="badge">${mems.join(" ∩ ")}</span> <span class="badge">mask ${mask}</span>`;
+      const btn=document.createElement("button");
+      btn.textContent="Inspect";
+      btn.addEventListener("click", () => {
+        state.selectedRegionKey=maskKey(mask);
+        setActiveViewPill("region");
+        beep("tick");
+        renderFloating();
+        requestRender();
+      });
+      head.appendChild(left); head.appendChild(btn);
+      const toks=document.createElement("div");
+      toks.className="tokens";
+      for (const t of buckets.get(mask)){
+        const chip=document.createElement("div");
+        chip.className="token";
+        chip.textContent=t;
+        toks.appendChild(chip);
+      }
+      item.appendChild(head);
+      item.appendChild(toks);
+      bucketsPanel.appendChild(item);
+    }
+    bucketCountEl.textContent = `${buckets.size} buckets`;
+    tokenCountEl.textContent = `${tokenMap.size} tokens`;
+  }
+
+  function getSaveObject(){
+    return {
+      version:1,
+      members: MEMBERS.map(m=>m.key),
+      textByMember: state.textByMember,
+      settings: state.settings,
+      panZoom: { panX:state.panX, panY:state.panY, zoom:state.zoom },
+      ui: { selectedRegionKey:state.selectedRegionKey, compareA:state.compareA, compareB:state.compareB, view:state.view }
+    };
+  }
+
+  function saveJSON(){
+    const obj=getSaveObject();
+    const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="slopshop_venn_data.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    beep("bubble");
+  }
+
+  function loadJSONFromFile(ev){
+    const f=ev.target.files && ev.target.files[0];
+    ev.target.value="";
+    if(!f) return;
+    const reader=new FileReader();
+    reader.onload=() => {
+      try{
+        const obj=JSON.parse(String(reader.result||"{}"));
+        if(!obj || typeof obj!=="object" || !obj.textByMember) throw new Error("Bad JSON");
+        for (const m of MEMBERS) state.textByMember[m.key]=String(obj.textByMember[m.key]||"");
+        if (obj.settings){
+          state.settings.darkBg=!!obj.settings.darkBg;
+          state.settings.spacing=clamp(+obj.settings.spacing||state.settings.spacing,140,360);
+          state.settings.size=clamp(+obj.settings.size||state.settings.size,170,420);
+          state.settings.pull=clamp(+obj.settings.pull||state.settings.pull,0,1);
+          state.settings.opacity=clamp(+obj.settings.opacity||state.settings.opacity,0.05,0.70);
+          state.settings.textSize=clamp(+obj.settings.textSize||state.settings.textSize,10,18);
+        }
+        if (obj.panZoom){
+          state.panX=+obj.panZoom.panX||0;
+          state.panY=+obj.panZoom.panY||0;
+          state.zoom=clamp(+obj.panZoom.zoom||1,0.35,2.8);
+        }
+        if (obj.ui){
+          state.selectedRegionKey=obj.ui.selectedRegionKey ?? null;
+          state.compareA=(obj.ui.compareA ?? null);
+          state.compareB=(obj.ui.compareB ?? null);
+          state.view=obj.ui.view || "region";
+          setActiveViewPill(state.view);
+        }
+        rebuildInputs();
+        applySettingsToUI();
+        renderBucketsPanel();
+        renderFloating();
+        requestRender();
+        beep("bubble");
+        statusEl.textContent="loaded";
+      } catch(e){
+        statusEl.textContent="load failed";
+        beep("tick");
+        alert("Couldn’t load JSON: " + e.message);
+      }
+    };
+    reader.readAsText(f);
+  }
+
+  function downloadPNG(){
+    const rect=stage.getBoundingClientRect();
+    const dpr=Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    const off=document.createElement("canvas");
+    off.width=Math.floor(rect.width*dpr);
+    off.height=Math.floor(rect.height*dpr);
+    const octx=off.getContext("2d");
+    octx.setTransform(dpr,0,0,dpr,0,0);
+    octx.clearRect(0,0,rect.width,rect.height);
+    if (state.settings.darkBg){
+      const bg=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0b0d10";
+      octx.fillStyle=bg;
+      octx.fillRect(0,0,rect.width,rect.height);
+    }
+
+    octx.save();
+    octx.translate(rect.width/2 + state.panX, rect.height/2 + state.panY);
+    octx.scale(state.zoom, state.zoom);
+
+    const { cx, cy, ellipses }=getEllipses();
+    for (const e of ellipses){
+      const col=e.member.color;
+      const op=state.settings.opacity;
+      octx.save();
+      octx.translate(e.x,e.y);
+      octx.rotate(e.rot);
+      octx.beginPath();
+      octx.ellipse(0,0,e.a,e.b,0,0,Math.PI*2);
+      octx.fillStyle=hexToRgba(col, op);
+      octx.fill();
+      octx.lineWidth=1.1;
+      octx.strokeStyle=hexToRgba(col, Math.min(0.55, op*2.8));
+      octx.stroke();
+      octx.restore();
+    }
+
+    octx.save();
+    octx.font=`700 15px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    octx.textAlign="center";
+    octx.textBaseline="middle";
+    octx.fillStyle="rgba(231,237,245,.92)";
+    octx.fillText("Slop Shop", cx, cy);
+    octx.restore();
+
+    octx.save();
+    octx.font=`700 13px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    octx.textAlign="center";
+    octx.textBaseline="middle";
+    for (const e of ellipses){
+      const ang=e.rot;
+      const lx=e.x + Math.cos(ang)*(e.a*0.86);
+      const ly=e.y + Math.sin(ang)*(e.b*0.86);
+      const text=e.member.label;
+      const tw=octx.measureText(text).width;
+      const padX=10;
+      roundedRect(octx, lx - tw/2 - padX, ly - 10, tw + padX*2, 20, 999);
+      octx.fillStyle="rgba(0,0,0,.24)"; octx.fill();
+      octx.strokeStyle="rgba(255,255,255,.12)"; octx.lineWidth=1; octx.stroke();
+      octx.fillStyle=hexToRgba(e.member.color,0.95);
+      octx.fillText(text,lx,ly);
+    }
+    octx.restore();
+
+    const { buckets }=buildBuckets();
+    const textSize=state.settings.textSize;
+    octx.save();
+    octx.font=`500 ${textSize}px ${getComputedStyle(document.documentElement).getPropertyValue("--mono")}`;
+    octx.textAlign="center";
+    octx.textBaseline="middle";
+    const placed=[];
+    const padding=6;
+    const masksSorted=[...buckets.keys()].sort((a,b)=>bitCount(+b)-bitCount(+a));
+    for (const mask of masksSorted){
+      const tokens=buckets.get(mask);
+      const base=basePointForMask(mask);
+      let jitter=0;
+      for (const tok of tokens){
+        const seed=hash(tok);
+        const ang=(seed%6283)/1000;
+        const rad=10+(seed%97);
+        const bx=base.x + Math.cos(ang)*(rad*0.4 + jitter);
+        const by=base.y + Math.sin(ang)*(rad*0.4 + jitter);
+        const p=findPointForMask(mask,bx,by);
+        let x=p.x, y=p.y;
+        for (let tries=0;tries<30;tries++){
+          const wTok=octx.measureText(tok).width;
+          const rect2={ x:x - wTok/2 - padding, y:y - textSize/2 - padding, w:wTok + padding*2, h:textSize + padding*2 };
+          if(!intersectsAny(rect2, placed)){ placed.push(rect2); break; }
+          const t=tries*0.8;
+          x += Math.cos(ang+t)*3;
+          y += Math.sin(ang+t)*3;
+        }
+        const mix=mixMaskColor(mask);
+        octx.fillStyle=hexToRgba(mix,0.92);
+        octx.fillText(tok,x,y);
+        jitter+=2;
+      }
+    }
+    octx.restore();
+    octx.restore();
+
+    const url=off.toDataURL("image/png");
+    const a=document.createElement("a");
+    a.href=url;
+    a.download = state.settings.darkBg ? "slopshop_venn.png" : "slopshop_venn_transparent.png";
+    a.click();
+    beep("bubble");
+  }
+
+  let audioCtx=null;
+  function beep(type="tick", gain=0.18){
+    try{
+      if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      const t0=audioCtx.currentTime;
+      const o1=audioCtx.createOscillator();
+      const o2=audioCtx.createOscillator();
+      const g=audioCtx.createGain();
+      const f1=type==="bubble"?540:980;
+      const f2=type==="bubble"?320:660;
+      o1.type="sine"; o2.type="triangle";
+      o1.frequency.setValueAtTime(f1,t0);
+      o2.frequency.setValueAtTime(f2,t0);
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.exponentialRampToValueAtTime(gain,t0+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+(type==="bubble"?0.14:0.07));
+      if(type==="bubble"){
+        o1.frequency.exponentialRampToValueAtTime(f1*0.78,t0+0.14);
+        o2.frequency.exponentialRampToValueAtTime(f2*0.72,t0+0.14);
+      }
+      o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+      o1.start(t0); o2.start(t0);
+      o1.stop(t0+0.16); o2.stop(t0+0.16);
+    } catch {}
+  }
+
+  function fullRefresh(){ renderBucketsPanel(); renderFloating(); requestRender(); }
+  fullRefresh();
+
+  const origRequestRender=requestRender;
+  requestRender = () => { renderBucketsPanel(); renderFloating(); origRequestRender(); };
+
+})();
+</script>
+</body>
+</html>
