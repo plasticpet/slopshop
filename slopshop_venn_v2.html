@@ -1,0 +1,2086 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Slop Shop — 6-Member Venn-ish Overlap Mapper (v2)</title>
+  <style>
+    :root{
+      --bg:#0b0d10;
+      --bg2:#0f141a;
+      --panel:#0f141a;
+      --panel2:#0c1016;
+      --text:#e7edf5;
+      --muted:#9aa8b7;
+      --border:rgba(255,255,255,.10);
+      --border2:rgba(255,255,255,.18);
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --radius: 14px;
+      --accent:#b7c7ff;
+    }
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:var(--bg);
+      color:var(--text);
+      overflow:hidden;
+    }
+    .app{
+      position:fixed; inset:0;
+      display:grid;
+      grid-template-columns: 380px 1fr 380px;
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    .panel{
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .panelHeader{
+      padding:12px 12px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      user-select:none;
+    }
+    .panelHeader .title{
+      font-weight:700;
+      letter-spacing:.2px;
+      font-size:14px;
+    }
+    .panelHeader .sub{
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--muted);
+      margin-top:2px;
+    }
+    .panelBody{
+      padding: 12px;
+      overflow:auto;
+      min-height:0;
+    }
+    .btnRow{
+      display:flex; gap:8px; flex-wrap:wrap;
+      align-items:center;
+    }
+    button{
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size:12px;
+      font-family:var(--font);
+      cursor:pointer;
+      transition: transform .05s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    button:hover{ background: rgba(255,255,255,.09); border-color: var(--border2); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: rgba(183,199,255,.16);
+      border-color: rgba(183,199,255,.28);
+    }
+    button.ghost{
+      background: rgba(255,255,255,.03);
+    }
+    button.danger{
+      background: rgba(255,120,120,.12);
+      border-color: rgba(255,120,120,.22);
+    }
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      padding:8px 10px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background: rgba(255,255,255,.04);
+    }
+    .toggle input{ accent-color: var(--accent); }
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:6px;
+      font-family:var(--mono);
+    }
+    .dot{
+      width:10px; height:10px;
+      border-radius:999px;
+      display:inline-block;
+      border:1px solid rgba(255,255,255,.25);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+      flex:0 0 auto;
+    }
+    textarea{
+      width:100%;
+      min-height: 96px;
+      resize: vertical;
+      box-sizing:border-box;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.22);
+      color:var(--text);
+      outline:none;
+      font-family:var(--mono);
+      font-size:12px;
+      line-height:1.25rem;
+    }
+    textarea:focus{ border-color: rgba(183,199,255,.28); }
+    .hint{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:6px;
+      line-height:1.25rem;
+    }
+    .kv{
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      gap:6px 10px;
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--muted);
+      margin: 8px 0 0;
+    }
+    .kv b{ color: var(--text); font-weight:600; }
+    .sliderRow{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:8px;
+      margin-top:10px;
+    }
+    .slider{
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background: rgba(255,255,255,.04);
+    }
+    .sliderTop{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      margin-bottom:8px;
+      font-size:12px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+    input[type="range"]{ width:100%; accent-color: var(--accent); }
+
+    select{
+      padding:10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      width: 100%;
+      outline: none;
+    }
+
+    .stage{
+      background: rgba(255,255,255,.02);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      position:relative;
+      min-height:0;
+    }
+    canvas{ display:block; width:100%; height:100%; }
+
+    .floating{
+      position:absolute;
+      left: 18px; top: 18px;
+      width: 460px;
+      max-width: min(560px, 92vw);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15,20,26,.92), rgba(12,16,22,.88));
+      border:1px solid var(--border);
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+      z-index: 10;
+    }
+    .floating.hidden{ display:none; }
+    .floatingHeader{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+      user-select:none;
+      cursor:grab;
+      gap:10px;
+    }
+    .floatingHeader:active{ cursor:grabbing; }
+    .floatingHeader .name{ font-size:13px; font-weight:700; letter-spacing:.2px; }
+    .floatingHeader .mini{ font-size:11px; color:var(--muted); font-family:var(--mono); }
+    .floatingBody{
+      padding: 10px 12px 12px;
+      max-height: min(70vh, 760px);
+      overflow:auto;
+    }
+    .pillRow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .pill{
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      padding: 6px 10px;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .pill.active{
+      background: rgba(183,199,255,.16);
+      border-color: rgba(183,199,255,.28);
+    }
+
+    .list{
+      border:1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(0,0,0,.18);
+      padding: 10px;
+      margin-top:10px;
+    }
+    .list h4{
+      margin:0 0 8px 0;
+      font-size:12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-weight:600;
+    }
+    .tokens{
+      display:flex; flex-wrap:wrap; gap:6px;
+      align-items:center;
+    }
+    .token{
+      font-family: var(--mono);
+      font-size:11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      user-select:text;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .tagdot{
+      width:8px;height:8px;border-radius:999px;display:inline-block;
+      border:1px solid rgba(255,255,255,.24);
+    }
+    .small{ font-size:11px; color:var(--muted); line-height:1.25rem; }
+
+    .rightPanel .panelBody{ padding-top:10px; }
+    .bucketItem{
+      padding:10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      margin-bottom:10px;
+    }
+    .bucketItem .head{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-bottom:6px;
+    }
+    .badge{
+      font-family: var(--mono);
+      font-size:11px;
+      color: var(--muted);
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      padding:4px 8px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .foot{
+      padding:10px 12px;
+      border-top:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:11px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+
+    /* Light background mode tweaks for panels (keeps the whole UI readable) */
+    body.light{
+      --bg:#f7f8fb;
+      --bg2:#ffffff;
+      --panel:#ffffff;
+      --panel2:#f2f4f8;
+      --text:#0c1117;
+      --muted:#4b5a6b;
+      --border:rgba(0,0,0,.10);
+      --border2:rgba(0,0,0,.16);
+      --shadow: 0 18px 60px rgba(0,0,0,.10);
+    }
+    body.light textarea, body.light select{
+      background: rgba(255,255,255,.85);
+      color: var(--text);
+    }
+    body.light .floating{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(245,247,251,.88));
+      backdrop-filter: blur(10px);
+    }
+    body.light .list{ background: rgba(255,255,255,.75); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- LEFT -->
+  <div class="panel">
+    <div class="panelHeader">
+      <div>
+        <div class="title">Data Entry</div>
+        <div class="sub">comma/newline tokens • #tags supported • exact overlap buckets</div>
+      </div>
+      <div class="btnRow">
+        <button class="primary" id="smartPresetBtn">Smart presets</button>
+        <button id="randomizeColorsBtn">Randomize colors</button>
+        <button id="recenterBtn">Recenter</button>
+      </div>
+    </div>
+
+    <div class="panelBody">
+      <div class="grid2" id="inputsGrid"></div>
+
+      <div style="height:10px"></div>
+
+      <div class="btnRow">
+        <button id="exportPngBtn">Download PNG</button>
+        <button id="saveJsonBtn">Save JSON</button>
+        <button id="loadJsonBtn">Load JSON</button>
+        <input id="loadJsonFile" type="file" accept="application/json" style="display:none" />
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="list" style="margin-top:0">
+        <h4>Background</h4>
+        <select id="bgMode">
+          <option value="dark">Dark</option>
+          <option value="light">White</option>
+          <option value="transparent">Transparent (export-ready)</option>
+        </select>
+        <div class="small" style="margin-top:8px">
+          Export respects this: Transparent gives a usable PNG asset.
+        </div>
+      </div>
+
+      <div class="sliderRow">
+        <div class="slider">
+          <div class="sliderTop"><span>Petal spacing</span><span class="small" id="sSpacingVal"></span></div>
+          <input id="sSpacing" type="range" min="140" max="360" value="250" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Ellipse size</span><span class="small" id="sSizeVal"></span></div>
+          <input id="sSize" type="range" min="170" max="420" value="300" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Overlap pull (to center)</span><span class="small" id="sPullVal"></span></div>
+          <input id="sPull" type="range" min="0" max="100" value="60" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Ellipse opacity</span><span class="small" id="sOpacityVal"></span></div>
+          <input id="sOpacity" type="range" min="5" max="70" value="18" />
+        </div>
+        <div class="slider">
+          <div class="sliderTop"><span>Text size</span><span class="small" id="sTextVal"></span></div>
+          <input id="sText" type="range" min="10" max="18" value="12" />
+        </div>
+      </div>
+
+      <div class="hint">
+        Tag syntax: prefix tokens with <b>#tag</b> or <b>#tag:</b> like “#workflow editing”.
+        Tags show as dots on chips + help you spot categories.
+      </div>
+
+      <div class="kv">
+        <div>Click words</div><b>click any word on the diagram to inspect + suggest adds</b>
+        <div>Click region</div><b>click inside overlap to inspect bucket</b>
+        <div>Compare</div><b>click member labels A then B</b>
+        <div>Pan/Zoom</div><b>drag empty space • wheel/trackpad</b>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div>Double-click floating box to hide/show</div>
+      <div id="status">ready</div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="stage" id="stage">
+    <canvas id="c"></canvas>
+
+    <div class="floating" id="floating">
+      <div class="floatingHeader" id="floatingHeader" title="Drag • inertia after release • double-click box to hide/show">
+        <div>
+          <div class="name">Fact check / analysis</div>
+          <div class="mini" id="floatingMini">Click a region, member label, or word</div>
+        </div>
+        <div class="pillRow">
+          <div class="pill active" data-view="word">Word</div>
+          <div class="pill" data-view="region">Region</div>
+          <div class="pill" data-view="compare">Compare</div>
+          <div class="pill" data-view="list">List</div>
+        </div>
+      </div>
+      <div class="floatingBody" id="floatingBody"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="panel rightPanel">
+    <div class="panelHeader">
+      <div>
+        <div class="title">Buckets</div>
+        <div class="sub">structured list view for correctness</div>
+      </div>
+      <div class="btnRow">
+        <button class="danger" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <div class="panelBody" id="bucketsPanel"></div>
+    <div class="foot">
+      <div id="bucketCount">0 buckets</div>
+      <div id="tokenCount">0 tokens</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // -------- Members --------
+  const MEMBERS = [
+    { key:"pet",         label:"pet",         color:"#9bbcff" },
+    { key:"catsoup",     label:"catsoup",     color:"#a7ffcc" },
+    { key:"xe",          label:"xe",          color:"#ffd9a6" },
+    { key:"johnwow",     label:"johnwow",     color:"#ffb3da" },
+    { key:"bookie",      label:"bookie",      color:"#d5c3ff" },
+    { key:"kingcon2k11", label:"kingcon2k11", color:"#b6f3ff" },
+  ];
+
+  // -------- State --------
+  const state = {
+    textByMember: Object.fromEntries(MEMBERS.map(m => [m.key, ""])),
+    settings: {
+      bgMode: "dark", // dark | light | transparent
+      spacing: 250,
+      size: 300,
+      pull: 0.60,
+      opacity: 0.18,
+      textSize: 12,
+    },
+    view: "word",
+    selectedRegionMask: null,
+    selectedTokenKey: null, // tokenLower
+    compareA: null,
+    compareB: null,
+    panX: 0, panY: 0, zoom: 1,
+  };
+
+  // -------- DOM --------
+  const canvas = document.getElementById("c");
+  const stage = document.getElementById("stage");
+  const ctx = canvas.getContext("2d");
+
+  const inputsGrid = document.getElementById("inputsGrid");
+  const bucketsPanel = document.getElementById("bucketsPanel");
+  const bucketCountEl = document.getElementById("bucketCount");
+  const tokenCountEl = document.getElementById("tokenCount");
+  const statusEl = document.getElementById("status");
+
+  const floating = document.getElementById("floating");
+  const floatingBody = document.getElementById("floatingBody");
+  const floatingMini = document.getElementById("floatingMini");
+  const floatingHeader = document.getElementById("floatingHeader");
+
+  const bgModeSel = document.getElementById("bgMode");
+  const sSpacing = document.getElementById("sSpacing");
+  const sSize = document.getElementById("sSize");
+  const sPull = document.getElementById("sPull");
+  const sOpacity = document.getElementById("sOpacity");
+  const sText = document.getElementById("sText");
+  const sSpacingVal = document.getElementById("sSpacingVal");
+  const sSizeVal = document.getElementById("sSizeVal");
+  const sPullVal = document.getElementById("sPullVal");
+  const sOpacityVal = document.getElementById("sOpacityVal");
+  const sTextVal = document.getElementById("sTextVal");
+
+  // -------- Utilities --------
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const bitCount = (n)=>{ n=n>>>0; let c=0; while(n){ n&=(n-1); c++; } return c; };
+
+  function hexToRgb(hex){
+    const h=hex.replace("#","").trim();
+    const n=parseInt(h.length===3 ? h.split("").map(x=>x+x).join("") : h, 16);
+    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+  }
+  function rgbToHex(r,g,b){ return "#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+  function hexToRgba(hex,a){ const {r,g,b}=hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+  function hash(str){
+    let h=2166136261;
+    for (let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+    return (h>>>0);
+  }
+  function normalizeToken(t){ return t.trim().replace(/\s+/g," "); }
+
+  function parseTaggedTokens(raw){
+    // Split on comma/newline, keep phrases
+    const parts = raw.split(/[\n,]+/g).map(s=>normalizeToken(s)).filter(Boolean);
+    const out = [];
+    const seen = new Set(); // case-insensitive uniqueness within member
+    for (const p of parts){
+      // tag syntax: "#tag token" or "#tag: token"
+      const m = p.match(/^#([a-zA-Z0-9_\-]+)\s*[:\s]\s*(.+)$/);
+      let tag = null;
+      let text = p;
+      if (m){
+        tag = m[1].toLowerCase();
+        text = normalizeToken(m[2]);
+      }
+      const key = text.toLowerCase();
+      if (!key) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ text, key, tag });
+    }
+    return out;
+  }
+
+  function maskToMembers(mask){
+    const list=[];
+    for (let i=0;i<MEMBERS.length;i++) if (mask & (1<<i)) list.push(MEMBERS[i].label);
+    return list;
+  }
+
+  function mixMaskColor(mask){
+    let r=0,g=0,b=0,c=0;
+    for (let i=0;i<MEMBERS.length;i++){
+      if (mask & (1<<i)){
+        const rgb=hexToRgb(MEMBERS[i].color);
+        r+=rgb.r; g+=rgb.g; b+=rgb.b; c++;
+      }
+    }
+    if(!c) return (state.settings.bgMode==="light" ? "#0c1117" : "#e7edf5");
+    r=Math.round(r/c); g=Math.round(g/c); b=Math.round(b/c);
+    return rgbToHex(r,g,b);
+  }
+
+  // tag palette (generated on the fly; stable by tag name)
+  function tagColor(tag){
+    if (!tag) return null;
+    const seed = hash("tag:"+tag);
+    const hue = seed % 360;
+    const sat = 62;
+    const light = (state.settings.bgMode==="light") ? 38 : 64;
+    return hslToHex(hue, sat, light);
+  }
+  function hslToHex(h,s,l){
+    s/=100; l/=100;
+    const k = n => (n + h/30) % 12;
+    const a = s * Math.min(l, 1-l);
+    const f = n => l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n), 1)));
+    const r = Math.round(255 * f(0));
+    const g = Math.round(255 * f(8));
+    const b = Math.round(255 * f(4));
+    return rgbToHex(r,g,b);
+  }
+
+  // -------- Buckets (exact overlap, no leaking) --------
+  function buildBuckets(){
+    // tokenLower -> { display, mask, tagsByMemberBit (optional), tagCounts }
+    const tokenMap = new Map();
+    const tokenTags = new Map(); // tokenLower -> { tag: count }
+    const tokenAnyTag = new Map(); // tokenLower -> most common tag or null
+
+    for (let i=0;i<MEMBERS.length;i++){
+      const m = MEMBERS[i];
+      const tokens = parseTaggedTokens(state.textByMember[m.key] || "");
+      for (const tok of tokens){
+        const bit = (1<<i);
+        if (!tokenMap.has(tok.key)){
+          tokenMap.set(tok.key, { display: tok.text, mask: bit });
+        } else {
+          tokenMap.get(tok.key).mask |= bit;
+        }
+        if (tok.tag){
+          if (!tokenTags.has(tok.key)) tokenTags.set(tok.key, new Map());
+          const mp = tokenTags.get(tok.key);
+          mp.set(tok.tag, (mp.get(tok.tag)||0) + 1);
+        }
+      }
+    }
+
+    // Decide a representative tag per token (most frequent tag across members; tie-break by alpha)
+    for (const [k, mp] of tokenTags){
+      let best = null, bestN = -1;
+      for (const [tag, n] of mp.entries()){
+        if (n > bestN || (n===bestN && tag < best)){
+          best = tag; bestN = n;
+        }
+      }
+      tokenAnyTag.set(k, best);
+    }
+
+    const buckets = new Map(); // mask -> tokenLower[]
+    for (const [k, v] of tokenMap.entries()){
+      if (!buckets.has(v.mask)) buckets.set(v.mask, []);
+      buckets.get(v.mask).push(k);
+    }
+
+    // sort tokens inside each bucket by display
+    for (const [mask, arr] of buckets){
+      arr.sort((a,b)=> (tokenMap.get(a).display).localeCompare(tokenMap.get(b).display, undefined, {sensitivity:"base"}));
+      buckets.set(mask, arr);
+    }
+
+    return { tokenMap, buckets, tokenAnyTag };
+  }
+
+  // -------- Geometry --------
+  function getEllipses(){
+    const cx = 0, cy = 0;
+    const R = state.settings.spacing;
+    const a = state.settings.size;
+    const b = state.settings.size * 0.74;
+    const ellipses = [];
+    for (let i=0;i<MEMBERS.length;i++){
+      const ang = (-Math.PI/2) + i*(2*Math.PI/MEMBERS.length);
+      ellipses.push({ i, member: MEMBERS[i], x: cx + R*Math.cos(ang), y: cy + R*Math.sin(ang), a, b, rot: ang });
+    }
+    return { cx, cy, ellipses };
+  }
+
+  function pointInEllipse(px, py, e){
+    const dx = px - e.x, dy = py - e.y;
+    const cr = Math.cos(-e.rot), sr = Math.sin(-e.rot);
+    const lx = dx*cr - dy*sr;
+    const ly = dx*sr + dy*cr;
+    return (lx*lx)/(e.a*e.a) + (ly*ly)/(e.b*e.b) <= 1;
+  }
+
+  function hitTestRegion(worldX, worldY){
+    const { ellipses } = getEllipses();
+    let mask = 0;
+    for (const e of ellipses){
+      if (pointInEllipse(worldX, worldY, e)) mask |= (1<<e.i);
+    }
+    return mask;
+  }
+
+  function basePointForMask(mask){
+    const { cx, cy, ellipses } = getEllipses();
+    const ids = [];
+    for (let i=0;i<MEMBERS.length;i++) if (mask & (1<<i)) ids.push(i);
+    if (!ids.length) return {x:cx, y:cy};
+
+    let vx = 0, vy = 0;
+    for (const id of ids){ vx += ellipses[id].x; vy += ellipses[id].y; }
+    vx /= ids.length; vy /= ids.length;
+
+    const k = ids.length;
+    const pull = state.settings.pull;
+    const sharePull = Math.min(1, pull * (k>=3 ? 1.25 : (k===2 ? 1.0 : 0.6)));
+    return { x: vx*(1-sharePull) + cx*sharePull, y: vy*(1-sharePull) + cy*sharePull };
+  }
+
+  function findPointForMask(mask, baseX, baseY){
+    const { ellipses } = getEllipses();
+    const inside = (x,y) => {
+      for (const e of ellipses){
+        const pin = pointInEllipse(x,y,e);
+        const shouldIn = !!(mask & (1<<e.i));
+        if (shouldIn && !pin) return false;
+        if (!shouldIn && pin) return false;
+      }
+      return true;
+    };
+    if (inside(baseX, baseY)) return {x:baseX, y:baseY};
+
+    let r=0;
+    for (let k=0;k<1500;k++){
+      r += 0.22;
+      const t = k*0.55;
+      const x = baseX + Math.cos(t)*r*9;
+      const y = baseY + Math.sin(t)*r*9;
+      if (inside(x,y)) return {x,y};
+    }
+    return {x:baseX, y:baseY, fallback:true};
+  }
+
+  // -------- Inputs --------
+  function rebuildInputs(){
+    inputsGrid.innerHTML = "";
+    for (const m of MEMBERS){
+      const wrap = document.createElement("div");
+      const lab = document.createElement("label");
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = m.color;
+      lab.appendChild(dot);
+      lab.appendChild(document.createTextNode(m.label));
+
+      const ta = document.createElement("textarea");
+      ta.placeholder = "type tokens… (comma/newline)\n#tag example: #workflow editing";
+      ta.value = state.textByMember[m.key] || "";
+      ta.addEventListener("input", () => {
+        state.textByMember[m.key] = ta.value;
+        statusEl.textContent = "updated";
+        requestRender();
+      });
+
+      wrap.appendChild(lab);
+      wrap.appendChild(ta);
+      inputsGrid.appendChild(wrap);
+    }
+  }
+
+  // -------- Settings UI --------
+  function applySettingsToUI(){
+    bgModeSel.value = state.settings.bgMode;
+    document.body.classList.toggle("light", state.settings.bgMode === "light");
+
+    sSpacing.value = state.settings.spacing;
+    sSize.value = state.settings.size;
+    sPull.value = Math.round(state.settings.pull * 100);
+    sOpacity.value = Math.round(state.settings.opacity * 100);
+    sText.value = state.settings.textSize;
+
+    sSpacingVal.textContent = state.settings.spacing;
+    sSizeVal.textContent = state.settings.size;
+    sPullVal.textContent = `${Math.round(state.settings.pull*100)}%`;
+    sOpacityVal.textContent = `${Math.round(state.settings.opacity*100)}%`;
+    sTextVal.textContent = `${state.settings.textSize}px`;
+  }
+
+  bgModeSel.addEventListener("change", () => {
+    state.settings.bgMode = bgModeSel.value;
+    applySettingsToUI();
+    beep("bubble");
+    requestRender();
+  });
+
+  const sliderHooks = [
+    [sSpacing, (v)=>state.settings.spacing = +v],
+    [sSize,    (v)=>state.settings.size = +v],
+    [sPull,    (v)=>state.settings.pull = (+v)/100],
+    [sOpacity, (v)=>state.settings.opacity = (+v)/100],
+    [sText,    (v)=>state.settings.textSize = +v],
+  ];
+  for (const [el, set] of sliderHooks){
+    el.addEventListener("input", () => {
+      set(el.value);
+      applySettingsToUI();
+      beep("tick", 0.12);
+      requestRender();
+    });
+  }
+
+  // -------- Buttons --------
+  document.getElementById("recenterBtn").addEventListener("click", () => {
+    state.panX = 0; state.panY = 0; state.zoom = 1;
+    beep("bubble");
+    requestRender();
+  });
+
+  document.getElementById("smartPresetBtn").addEventListener("click", () => {
+    state.settings.spacing = 270;
+    state.settings.size = 325;
+    state.settings.pull = 0.66;
+    state.settings.opacity = (state.settings.bgMode==="light" ? 0.12 : 0.16);
+    state.settings.textSize = 12;
+    applySettingsToUI();
+    beep("bubble");
+    requestRender();
+  });
+
+  document.getElementById("randomizeColorsBtn").addEventListener("click", () => {
+    randomizeMemberColors();
+    rebuildInputs();
+    beep("bubble");
+    requestRender();
+  });
+
+  document.getElementById("exportPngBtn").addEventListener("click", downloadPNG);
+  document.getElementById("saveJsonBtn").addEventListener("click", saveJSON);
+  document.getElementById("loadJsonBtn").addEventListener("click", () => document.getElementById("loadJsonFile").click());
+  document.getElementById("loadJsonFile").addEventListener("change", loadJSONFromFile);
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    for (const m of MEMBERS) state.textByMember[m.key] = "";
+    state.selectedRegionMask = null;
+    state.selectedTokenKey = null;
+    state.compareA = null; state.compareB = null;
+    beep("tick");
+    rebuildInputs();
+    requestRender();
+  });
+
+  // -------- Randomize colors (smart) --------
+  function randomizeMemberColors(){
+    // evenly spaced hues, stable saturation/lightness for readability
+    const base = Math.floor(Math.random()*360);
+    const sat = 70;
+    const light = (state.settings.bgMode==="light") ? 40 : 66;
+    for (let i=0;i<MEMBERS.length;i++){
+      const hue = (base + i*(360/MEMBERS.length)) % 360;
+      MEMBERS[i].color = hslToHex(hue, sat, light);
+    }
+  }
+
+  // -------- Canvas sizing --------
+  let needsRender = true;
+  let raf = null;
+
+  function requestRender(){
+    needsRender = true;
+    // keep panels synced
+    renderBucketsPanel();
+    renderFloating();
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+
+  function resize(){
+    const r = stage.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(r.width * dpr);
+    canvas.height = Math.floor(r.height * dpr);
+    canvas.style.width = r.width + "px";
+    canvas.style.height = r.height + "px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    requestRender();
+  }
+  window.addEventListener("resize", resize);
+
+  function tick(){
+    raf = null;
+    if (needsRender) render();
+  }
+
+  // -------- Hit caches --------
+  const hit = {
+    memberLabels: [], // screen rects
+    tokenRects: [],   // screen rects with tokenKey/mask
+  };
+
+  // -------- Render --------
+  function render(){
+    needsRender = false;
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    // background fill based on mode
+    ctx.clearRect(0,0,w,h);
+    if (state.settings.bgMode !== "transparent"){
+      const bg = (state.settings.bgMode==="light")
+        ? (getComputedStyle(document.documentElement).getPropertyValue("--bg2").trim() || "#ffffff")
+        : (getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0b0d10");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0,0,w,h);
+    }
+
+    // world transform
+    ctx.save();
+    ctx.translate(w/2 + state.panX, h/2 + state.panY);
+    ctx.scale(state.zoom, state.zoom);
+
+    const { cx, cy, ellipses } = getEllipses();
+
+    // ellipses
+    for (const e of ellipses){
+      const col = e.member.color;
+      const op = state.settings.opacity;
+
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.rotate(e.rot);
+      ctx.beginPath();
+      ctx.ellipse(0,0,e.a,e.b,0,0,Math.PI*2);
+      ctx.fillStyle = hexToRgba(col, op);
+      ctx.fill();
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = hexToRgba(col, Math.min(0.55, op*2.8));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // center label
+    ctx.save();
+    ctx.font = `800 15px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = (state.settings.bgMode==="light") ? "rgba(12,17,23,.88)" : "rgba(231,237,245,.92)";
+    ctx.fillText("Slop Shop", cx, cy);
+    ctx.restore();
+
+    // member labels with dot
+    const labelRectsWorld = [];
+    ctx.save();
+    ctx.font = `800 13px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    for (const e of ellipses){
+      const ang = e.rot;
+      const lx = e.x + Math.cos(ang) * (e.a * 0.86);
+      const ly = e.y + Math.sin(ang) * (e.b * 0.86);
+
+      const isSelected = (state.compareA === e.i || state.compareB === e.i);
+      const bg = isSelected ? "rgba(183,199,255,.22)" : (state.settings.bgMode==="light" ? "rgba(255,255,255,.72)" : "rgba(0,0,0,.24)");
+      const br = isSelected ? "rgba(183,199,255,.30)" : (state.settings.bgMode==="light" ? "rgba(0,0,0,.14)" : "rgba(255,255,255,.12)");
+      const padX = 12, padY = 6;
+      const text = e.member.label;
+      const tw = ctx.measureText(text).width;
+
+      const x = lx, y = ly;
+      const pillW = tw + padX*2 + 14; // extra for dot
+      const pillH = 22;
+
+      roundedRect(ctx, x - pillW/2, y - pillH/2, pillW, pillH, 999);
+      ctx.fillStyle = bg; ctx.fill();
+      ctx.strokeStyle = br; ctx.lineWidth = 1; ctx.stroke();
+
+      // dot
+      ctx.beginPath();
+      ctx.arc(x - pillW/2 + 12, y, 4.6, 0, Math.PI*2);
+      ctx.fillStyle = e.member.color;
+      ctx.fill();
+      ctx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.18)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = (state.settings.bgMode==="light") ? "rgba(12,17,23,.88)" : hexToRgba(e.member.color, 0.95);
+      ctx.fillText(text, x + 6, y);
+
+      labelRectsWorld.push({ i:e.i, x: x - pillW/2, y: y - pillH/2, w: pillW, h: pillH });
+    }
+    ctx.restore();
+
+    // tokens + hit rectangles
+    const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+    const textSize = state.settings.textSize;
+    const placed = [];
+    const padding = 6;
+
+    hit.tokenRects = [];
+    const tokenRectsWorld = [];
+
+    ctx.save();
+    ctx.font = `600 ${textSize}px ${getComputedStyle(document.documentElement).getPropertyValue("--mono")}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const masksSorted = [...buckets.keys()].sort((a,b)=> bitCount(+b) - bitCount(+a));
+    for (const mask of masksSorted){
+      const keys = buckets.get(mask);
+      const base = basePointForMask(mask);
+
+      let jitter = 0;
+      for (const k of keys){
+        const disp = tokenMap.get(k).display;
+        const seed = hash(disp);
+        const ang = (seed % 6283)/1000;
+        const rad = 10 + (seed % 97);
+        const bx = base.x + Math.cos(ang)*(rad*0.4 + jitter);
+        const by = base.y + Math.sin(ang)*(rad*0.4 + jitter);
+        const p = findPointForMask(mask, bx, by);
+
+        let x = p.x, y = p.y;
+        const wTok = ctx.measureText(disp).width;
+        for (let tries=0; tries<30; tries++){
+          const rect = { x: x - wTok/2 - padding, y: y - textSize/2 - padding, w: wTok + padding*2, h: textSize + padding*2 };
+          if (!intersectsAny(rect, placed)){
+            placed.push(rect);
+            break;
+          }
+          const t = tries*0.8;
+          x += Math.cos(ang+t)*3;
+          y += Math.sin(ang+t)*3;
+        }
+
+        // highlight selected token
+        if (state.selectedTokenKey === k){
+          ctx.save();
+          ctx.fillStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.06)" : "rgba(255,255,255,.06)";
+          roundedRect(ctx, x - wTok/2 - 10, y - textSize/2 - 8, wTok + 20, textSize + 16, 999);
+          ctx.fill();
+          ctx.strokeStyle = hexToRgba(mixMaskColor(mask), 0.55);
+          ctx.lineWidth = 1.6;
+          ctx.setLineDash([6,6]);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        const mix = mixMaskColor(mask);
+        const baseTextColor = (state.settings.bgMode==="light") ? "rgba(12,17,23,.86)" : hexToRgba(mix, 0.92);
+        ctx.fillStyle = baseTextColor;
+        ctx.fillText(disp, x, y);
+
+        // tag dot near token (category cue)
+        const tag = tokenAnyTag.get(k) || null;
+        if (tag){
+          ctx.beginPath();
+          ctx.arc(x + wTok/2 + 8, y, 3.6, 0, Math.PI*2);
+          ctx.fillStyle = tagColor(tag);
+          ctx.fill();
+          ctx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.18)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        tokenRectsWorld.push({ tokenKey:k, mask, x: x - wTok/2 - 8, y: y - textSize/2 - 8, w: wTok + 16 + (tag ? 16 : 0), h: textSize + 16 });
+        jitter += 2;
+      }
+    }
+    ctx.restore();
+
+    // region outline if selected
+    if (state.selectedRegionMask != null){
+      const mask = state.selectedRegionMask;
+      if (mask !== 0){
+        ctx.save();
+        ctx.lineWidth = 2.2;
+        ctx.setLineDash([6,6]);
+        const col = mixMaskColor(mask);
+        ctx.strokeStyle = hexToRgba(col, 0.65);
+        for (const e of ellipses){
+          if (mask & (1<<e.i)){
+            ctx.save();
+            ctx.translate(e.x, e.y);
+            ctx.rotate(e.rot);
+            ctx.beginPath();
+            ctx.ellipse(0,0,e.a,e.b,0,0,Math.PI*2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        ctx.restore();
+      }
+    }
+
+    // end world transform
+    ctx.restore();
+
+    // cache hit boxes in screen space
+    hit.memberLabels = labelRectsWorld.map(r => worldRectToScreen(r));
+    hit.tokenRects = tokenRectsWorld.map(r => worldRectToScreen(r));
+  }
+
+  function roundedRect(ctx, x, y, w, h, r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+
+  function intersectsAny(a, arr){
+    for (const b of arr){
+      if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) return true;
+    }
+    return false;
+  }
+
+  function worldRectToScreen(r){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    return {
+      ...r,
+      x: (r.x * state.zoom) + (w/2 + state.panX),
+      y: (r.y * state.zoom) + (h/2 + state.panY),
+      w: r.w * state.zoom,
+      h: r.h * state.zoom
+    };
+  }
+
+  function screenToWorld(sx, sy){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    return { x:(sx - (w/2 + state.panX))/state.zoom, y:(sy - (h/2 + state.panY))/state.zoom };
+  }
+
+  // -------- Interaction: click tokens, regions, member labels, pan/zoom --------
+  let isPanning = false;
+  let last = null;
+
+  canvas.addEventListener("pointerdown", (ev) => {
+    canvas.setPointerCapture(ev.pointerId);
+    const rect = stage.getBoundingClientRect();
+    const sx = ev.clientX - rect.left;
+    const sy = ev.clientY - rect.top;
+
+    // 1) Token hit
+    const tokHit = hit.tokenRects.find(r => sx>=r.x && sx<=r.x+r.w && sy>=r.y && sy<=r.y+r.h);
+    if (tokHit){
+      state.selectedTokenKey = tokHit.tokenKey;
+      state.selectedRegionMask = tokHit.mask; // keep linked
+      state.view = "word";
+      setActiveViewPill("word");
+      beep("bubble");
+      renderFloating();
+      requestRender();
+      return;
+    }
+
+    // 2) Member label hit (compare)
+    const memHit = hit.memberLabels.find(r => sx>=r.x && sx<=r.x+r.w && sy>=r.y && sy<=r.y+r.h);
+    if (memHit){
+      if (state.compareA == null || (state.compareA != null && state.compareB != null)){
+        state.compareA = memHit.i; state.compareB = null;
+      } else if (state.compareA != null && state.compareB == null){
+        if (memHit.i === state.compareA) state.compareA = null;
+        else state.compareB = memHit.i;
+      }
+      state.view = "compare";
+      setActiveViewPill("compare");
+      state.selectedTokenKey = null;
+      beep("bubble");
+      renderFloating();
+      requestRender();
+      return;
+    }
+
+    // 3) Region hit
+    const p = screenToWorld(sx, sy);
+    const mask = hitTestRegion(p.x, p.y);
+    if (mask !== 0){
+      state.selectedRegionMask = mask;
+      state.selectedTokenKey = null;
+      state.view = "region";
+      setActiveViewPill("region");
+      beep("tick");
+      renderFloating();
+      requestRender();
+      return;
+    }
+
+    // 4) Pan
+    isPanning = true;
+    last = { x: ev.clientX, y: ev.clientY };
+  });
+
+  canvas.addEventListener("pointermove", (ev) => {
+    if (!isPanning) return;
+    const dx = ev.clientX - last.x;
+    const dy = ev.clientY - last.y;
+    state.panX += dx;
+    state.panY += dy;
+    last = { x: ev.clientX, y: ev.clientY };
+    requestRender();
+  });
+
+  canvas.addEventListener("pointerup", () => { isPanning = false; });
+
+  canvas.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const delta = -ev.deltaY;
+    const factor = Math.exp(delta * 0.0012);
+    const old = state.zoom;
+    const next = clamp(old * factor, 0.35, 2.8);
+
+    const rect = stage.getBoundingClientRect();
+    const sx = ev.clientX - rect.left;
+    const sy = ev.clientY - rect.top;
+
+    const before = screenToWorld(sx, sy);
+    state.zoom = next;
+    const after = screenToWorld(sx, sy);
+
+    // keep cursor anchored
+    state.panX += (after.x - before.x) * state.zoom;
+    state.panY += (after.y - before.y) * state.zoom;
+    requestRender();
+  }, { passive:false });
+
+  // -------- Floating menu drag w/ inertia + dblclick toggle --------
+  floating.addEventListener("dblclick", () => { floating.classList.toggle("hidden"); beep("bubble"); });
+
+  let menuDrag = null;
+  floatingHeader.addEventListener("pointerdown", (ev) => {
+    if (floating.classList.contains("hidden")) return;
+    floatingHeader.setPointerCapture(ev.pointerId);
+    const r = floating.getBoundingClientRect();
+    menuDrag = {
+      startX: ev.clientX, startY: ev.clientY,
+      origX: r.left, origY: r.top,
+      vx:0, vy:0,
+      lastX: ev.clientX, lastY: ev.clientY, lastT: performance.now()
+    };
+  });
+
+  window.addEventListener("pointermove", (ev) => {
+    if (!menuDrag) return;
+    const dx = ev.clientX - menuDrag.startX;
+    const dy = ev.clientY - menuDrag.startY;
+
+    const now = performance.now();
+    const dt = Math.max(1, now - menuDrag.lastT);
+    menuDrag.vx = (ev.clientX - menuDrag.lastX) / dt;
+    menuDrag.vy = (ev.clientY - menuDrag.lastY) / dt;
+    menuDrag.lastX = ev.clientX;
+    menuDrag.lastY = ev.clientY;
+    menuDrag.lastT = now;
+
+    setFloatingPos(menuDrag.origX + dx, menuDrag.origY + dy);
+  });
+
+  window.addEventListener("pointerup", () => {
+    if (!menuDrag) return;
+    const vx = menuDrag.vx, vy = menuDrag.vy;
+    menuDrag = null;
+
+    const friction = 0.92;
+    let ivx = vx * 26;
+    let ivy = vy * 26;
+    let lastT = performance.now();
+
+    const step = () => {
+      const now = performance.now();
+      const dt = Math.min(32, now - lastT);
+      lastT = now;
+
+      const r = floating.getBoundingClientRect();
+      setFloatingPos(r.left + ivx*dt, r.top + ivy*dt);
+
+      ivx *= Math.pow(friction, dt/16);
+      ivy *= Math.pow(friction, dt/16);
+
+      if (Math.abs(ivx)+Math.abs(ivy) > 0.02) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+
+  function setFloatingPos(x, y){
+    const st = stage.getBoundingClientRect();
+    const r = floating.getBoundingClientRect();
+    const minX = st.left + 8;
+    const minY = st.top + 8;
+    const maxX = st.right - r.width - 8;
+    const maxY = st.bottom - r.height - 8;
+    const nx = clamp(x, minX, maxX);
+    const ny = clamp(y, minY, maxY);
+    floating.style.left = (nx - st.left) + "px";
+    floating.style.top = (ny - st.top) + "px";
+    floating.style.position = "absolute";
+  }
+
+  // -------- Tabs --------
+  function setActiveViewPill(view){
+    floatingHeader.querySelectorAll(".pill").forEach(x => x.classList.toggle("active", x.dataset.view === view));
+    state.view = view;
+  }
+  floatingHeader.querySelectorAll(".pill").forEach(p => {
+    p.addEventListener("click", () => {
+      setActiveViewPill(p.dataset.view);
+      beep("tick");
+      renderFloating();
+    });
+  });
+
+  // -------- Suggest engine (usable, add to one/many) --------
+  const SUGGEST_RULES = [
+    // examples you gave
+    { match:(t)=> /edit|editing|editor|post/.test(t), out:["film industry","post-production","cutting room","deliverables","client notes","versioning"] },
+    { match:(t)=> /clean/.test(t) && /edit|editing|post/.test(t), out:["commercial/industry style","broadcast polish","brand-safe","tight pacing"] },
+
+    // extra useful domains
+    { match:(t)=> /ai|neural|model|gen|lora|prompt/.test(t), out:["pipeline","dataset curation","iteration","style control","post-processing","toolchain"] },
+    { match:(t)=> /projection|stage|live|show/.test(t), out:["tour visuals","media server","mapping","sync","lighting integration","rehearsal"] },
+    { match:(t)=> /sound|mix|audio|ableton/.test(t), out:["post audio","mix notes","loudness","stems","deliverable specs"] },
+    { match:(t)=> /brand|logo|identity/.test(t), out:["brand system","asset library","guidelines","consistency"] },
+    { match:(t)=> /workflow|process|pipeline/.test(t), out:["handoff","QA","checklists","version control"] },
+  ];
+
+  function suggestForToken(display){
+    const t = display.toLowerCase();
+    const out = new Set();
+    for (const r of SUGGEST_RULES){
+      if (r.match(t)) for (const s of r.out) out.add(s);
+    }
+    // light generic expansions by word fragments
+    if (/\b3d\b/.test(t)) ["render","shading","lighting"].forEach(x=>out.add(x));
+    if (/\b2d\b/.test(t)) ["compositing","masking","motion"].forEach(x=>out.add(x));
+    return [...out];
+  }
+
+  // helper: apply suggestions to selected members
+  function applySuggestionsToMembers(suggestions, memberIdxs, tag=null){
+    for (const idx of memberIdxs){
+      const mkey = MEMBERS[idx].key;
+      const existing = new Set(parseTaggedTokens(state.textByMember[mkey]||"").map(x=>x.key));
+      const merged = parseTaggedTokens(state.textByMember[mkey]||"").map(x => ({...x}));
+      for (const s of suggestions){
+        const key = s.toLowerCase();
+        if (existing.has(key)) continue;
+        merged.push({ text: s, key, tag });
+        existing.add(key);
+      }
+      // write back preserving tags
+      state.textByMember[mkey] = merged.map(x => x.tag ? `#${x.tag} ${x.text}` : x.text).join("\n");
+    }
+    rebuildInputs();
+    requestRender();
+  }
+
+  // -------- Floating render --------
+  function makeMemberBadge(mask){
+    const mems = [];
+    for (let i=0;i<MEMBERS.length;i++){
+      if (mask & (1<<i)){
+        const m = MEMBERS[i];
+        mems.push(`<span class="badge"><span class="dot" style="background:${m.color};border:1px solid rgba(255,255,255,.24)"></span>${escapeHtml(m.label)}</span>`);
+      }
+    }
+    return mems.join(" ");
+  }
+
+  function tokenChip(display, tag=null){
+    const td = tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : "";
+    return `<span class="token" data-token="${escapeHtml(display)}">${td}${escapeHtml(display)}</span>`;
+  }
+
+  function renderFloating(){
+    const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+
+    // mini line
+    if (state.view === "word"){
+      if (!state.selectedTokenKey){
+        floatingMini.textContent = "Click a word on the diagram to inspect it";
+      } else {
+        const disp = tokenMap.get(state.selectedTokenKey)?.display || state.selectedTokenKey;
+        floatingMini.textContent = `Word: ${disp}`;
+      }
+    }
+    if (state.view === "region"){
+      if (state.selectedRegionMask == null){
+        floatingMini.textContent = "Click an overlap region to inspect its exact bucket";
+      } else {
+        const mems = maskToMembers(state.selectedRegionMask);
+        floatingMini.textContent = `Bucket: ${mems.join(" ∩ ")} (${mems.length})`;
+      }
+    }
+    if (state.view === "compare"){
+      if (state.compareA == null) floatingMini.textContent = "Click two member labels in the diagram";
+      else if (state.compareB == null) floatingMini.textContent = `Selected A: ${MEMBERS[state.compareA].label} — pick B`;
+      else floatingMini.textContent = `Compare: ${MEMBERS[state.compareA].label} vs ${MEMBERS[state.compareB].label}`;
+    }
+    if (state.view === "list"){
+      floatingMini.textContent = `Verification list • ${buckets.size} buckets • ${tokenMap.size} unique tokens`;
+    }
+
+    floatingBody.innerHTML = "";
+
+    // --- WORD VIEW ---
+    if (state.view === "word"){
+      const wrap = document.createElement("div");
+      wrap.className = "list";
+      const h = document.createElement("h4");
+      h.textContent = "Word inspector";
+      wrap.appendChild(h);
+
+      if (!state.selectedTokenKey || !tokenMap.has(state.selectedTokenKey)){
+        const s = document.createElement("div");
+        s.className = "small";
+        s.textContent = "Click any word on the diagram (not just circles) to open details and suggestions.";
+        wrap.appendChild(s);
+        floatingBody.appendChild(wrap);
+        return;
+      }
+
+      const tok = tokenMap.get(state.selectedTokenKey);
+      const mask = tok.mask;
+      const tag = tokenAnyTag.get(state.selectedTokenKey) || null;
+
+      const meta = document.createElement("div");
+      meta.className = "small";
+      meta.innerHTML = `${makeMemberBadge(mask)} <span class="badge">mask ${mask}</span>${tag ? ` <span class="badge"><span class="tagdot" style="background:${tagColor(tag)}"></span>#${escapeHtml(tag)}</span>` : ""}`;
+      wrap.appendChild(meta);
+
+      const toks = document.createElement("div");
+      toks.className = "tokens";
+      toks.style.marginTop = "10px";
+      toks.innerHTML = tokenChip(tok.display, tag);
+      wrap.appendChild(toks);
+
+      // suggestions
+      const sug = suggestForToken(tok.display);
+      const sugBox = document.createElement("div");
+      sugBox.className = "list";
+      sugBox.innerHTML = `<h4>Suggested similarities / differences</h4>`;
+      if (!sug.length){
+        const s = document.createElement("div");
+        s.className = "small";
+        s.textContent = "No suggestion rules matched this word yet.";
+        sugBox.appendChild(s);
+      } else {
+        const tokWrap = document.createElement("div");
+        tokWrap.className = "tokens";
+        for (const s of sug){
+          const chip = document.createElement("div");
+          chip.className = "token";
+          chip.textContent = s;
+          chip.dataset.sug = s;
+          tokWrap.appendChild(chip);
+        }
+        sugBox.appendChild(tokWrap);
+
+        const controls = document.createElement("div");
+        controls.style.marginTop = "10px";
+        controls.className = "small";
+        controls.textContent = "Choose where to add:";
+        sugBox.appendChild(controls);
+
+        const row = document.createElement("div");
+        row.className = "btnRow";
+        row.style.marginTop = "8px";
+
+        const btnBucket = document.createElement("button");
+        btnBucket.className = "primary";
+        btnBucket.textContent = "Add to all members in this bucket";
+        btnBucket.addEventListener("click", () => {
+          const membersIdx = [];
+          for (let i=0;i<MEMBERS.length;i++) if (mask & (1<<i)) membersIdx.push(i);
+          applySuggestionsToMembers(sug, membersIdx, tag || "suggest");
+          beep("bubble");
+        });
+
+        const btnPick = document.createElement("button");
+        btnPick.textContent = "Pick members…";
+        btnPick.addEventListener("click", () => openMemberPicker(sug, tag || "suggest"));
+
+        row.appendChild(btnBucket);
+        row.appendChild(btnPick);
+        sugBox.appendChild(row);
+      }
+
+      floatingBody.appendChild(wrap);
+      floatingBody.appendChild(sugBox);
+    }
+
+    // --- REGION VIEW ---
+    if (state.view === "region"){
+      const wrap = document.createElement("div");
+      wrap.className = "list";
+      const h = document.createElement("h4");
+      h.textContent = "Exact overlap bucket";
+      wrap.appendChild(h);
+
+      if (state.selectedRegionMask == null){
+        const s = document.createElement("div");
+        s.className = "small";
+        s.textContent = "Click inside an overlap on the diagram.";
+        wrap.appendChild(s);
+        floatingBody.appendChild(wrap);
+        return;
+      }
+
+      const mask = state.selectedRegionMask;
+      const keys = buckets.get(mask) || [];
+      const meta = document.createElement("div");
+      meta.className = "small";
+      meta.innerHTML = `${makeMemberBadge(mask)} <span class="badge">${keys.length} tokens</span> <span class="badge">mask ${mask}</span>`;
+      wrap.appendChild(meta);
+
+      const tokWrap = document.createElement("div");
+      tokWrap.className = "tokens";
+      tokWrap.style.marginTop = "10px";
+      for (const k of keys){
+        const disp = tokenMap.get(k).display;
+        const tag = tokenAnyTag.get(k) || null;
+        const chip = document.createElement("div");
+        chip.className = "token";
+        chip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(disp)}`;
+        chip.addEventListener("click", () => {
+          state.selectedTokenKey = k;
+          setActiveViewPill("word");
+          beep("bubble");
+          renderFloating();
+          requestRender();
+        });
+        tokWrap.appendChild(chip);
+      }
+      wrap.appendChild(tokWrap);
+      floatingBody.appendChild(wrap);
+    }
+
+    // --- COMPARE VIEW ---
+    if (state.view === "compare"){
+      const wrap = document.createElement("div");
+      wrap.className = "list";
+      const h = document.createElement("h4");
+      h.textContent = "Comparison output";
+      wrap.appendChild(h);
+
+      if (state.compareA == null || state.compareB == null){
+        const s = document.createElement("div");
+        s.className = "small";
+        s.textContent = "Click member label A then B in the diagram.";
+        wrap.appendChild(s);
+        floatingBody.appendChild(wrap);
+        return;
+      }
+
+      const { tokenMap, tokenAnyTag } = buildBuckets();
+      const aKey = MEMBERS[state.compareA].key;
+      const bKey = MEMBERS[state.compareB].key;
+
+      const aTokens = new Map(parseTaggedTokens(state.textByMember[aKey]||"").map(x=>[x.key, x]));
+      const bTokens = new Map(parseTaggedTokens(state.textByMember[bKey]||"").map(x=>[x.key, x]));
+
+      const shared = [];
+      const aOnly = [];
+      const bOnly = [];
+
+      for (const k of aTokens.keys()){
+        if (bTokens.has(k)) shared.push(k);
+        else aOnly.push(k);
+      }
+      for (const k of bTokens.keys()){
+        if (!aTokens.has(k)) bOnly.push(k);
+      }
+
+      const header = document.createElement("div");
+      header.className = "small";
+      header.innerHTML = `<span class="badge"><span class="dot" style="background:${MEMBERS[state.compareA].color}"></span>${escapeHtml(MEMBERS[state.compareA].label)}</span> vs <span class="badge"><span class="dot" style="background:${MEMBERS[state.compareB].color}"></span>${escapeHtml(MEMBERS[state.compareB].label)}</span>`;
+      wrap.appendChild(header);
+
+      const sec = (title, arr) => {
+        const box = document.createElement("div");
+        box.className = "list";
+        box.style.marginTop = "10px";
+        box.innerHTML = `<h4>${escapeHtml(title)} (${arr.length})</h4>`;
+        const toks = document.createElement("div");
+        toks.className = "tokens";
+        arr.sort((x,y)=> (tokenMap.get(x)?.display||x).localeCompare(tokenMap.get(y)?.display||y, undefined, {sensitivity:"base"}));
+        for (const k of arr){
+          const disp = tokenMap.get(k)?.display || k;
+          const tag = tokenAnyTag.get(k) || null;
+          const chip = document.createElement("div");
+          chip.className = "token";
+          chip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(disp)}`;
+          chip.addEventListener("click", () => {
+            state.selectedTokenKey = k;
+            setActiveViewPill("word");
+            beep("bubble");
+            renderFloating();
+            requestRender();
+          });
+          toks.appendChild(chip);
+        }
+        box.appendChild(toks);
+        return box;
+      };
+
+      floatingBody.appendChild(wrap);
+      floatingBody.appendChild(sec("Shared", shared));
+      floatingBody.appendChild(sec(`${MEMBERS[state.compareA].label} only`, aOnly));
+      floatingBody.appendChild(sec(`${MEMBERS[state.compareB].label} only`, bOnly));
+    }
+
+    // --- LIST VIEW ---
+    if (state.view === "list"){
+      const wrap = document.createElement("div");
+      wrap.className = "list";
+      const h = document.createElement("h4");
+      h.textContent = "All buckets (ground truth)";
+      wrap.appendChild(h);
+
+      const small = document.createElement("div");
+      small.className = "small";
+      small.textContent = "This is the verification view. Everything here is computed from tokens → exact member set.";
+      wrap.appendChild(small);
+
+      const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+      const masks = [...buckets.keys()].sort((a,b)=> bitCount(+b)-bitCount(+a));
+
+      for (const mask of masks){
+        const keys = buckets.get(mask);
+        const item = document.createElement("div");
+        item.className = "bucketItem";
+
+        const head = document.createElement("div");
+        head.className = "head";
+        const left = document.createElement("div");
+        left.innerHTML = `${makeMemberBadge(mask)} <span class="badge">${keys.length} tokens</span> <span class="badge">mask ${mask}</span>`;
+        const btn = document.createElement("button");
+        btn.textContent = "Select";
+        btn.addEventListener("click", () => {
+          state.selectedRegionMask = mask;
+          setActiveViewPill("region");
+          beep("tick");
+          renderFloating();
+          requestRender();
+        });
+        head.appendChild(left);
+        head.appendChild(btn);
+
+        const toks = document.createElement("div");
+        toks.className = "tokens";
+        for (const k of keys){
+          const disp = tokenMap.get(k).display;
+          const tag = tokenAnyTag.get(k) || null;
+          const chip = document.createElement("div");
+          chip.className = "token";
+          chip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(disp)}`;
+          chip.addEventListener("click", () => {
+            state.selectedTokenKey = k;
+            setActiveViewPill("word");
+            beep("bubble");
+            renderFloating();
+            requestRender();
+          });
+          toks.appendChild(chip);
+        }
+
+        item.appendChild(head);
+        item.appendChild(toks);
+        wrap.appendChild(item);
+      }
+
+      floatingBody.appendChild(wrap);
+    }
+
+    // attach token chip clicks inside floating (for "Pick members…" modal)
+  }
+
+  // member picker (simple, inline modal)
+  function openMemberPicker(suggestions, tag){
+    const modal = document.createElement("div");
+    modal.className = "list";
+    modal.style.marginTop = "10px";
+    modal.innerHTML = `<h4>Pick members to add suggestions</h4><div class="small">Adds missing suggestions only. Tag applied: #${escapeHtml(tag)}</div>`;
+    const grid = document.createElement("div");
+    grid.style.display = "grid";
+    grid.style.gridTemplateColumns = "1fr 1fr";
+    grid.style.gap = "8px";
+    grid.style.marginTop = "10px";
+
+    const checks = MEMBERS.map((m, idx) => {
+      const row = document.createElement("div");
+      row.className = "toggle";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = false;
+      const txt = document.createElement("div");
+      txt.innerHTML = `<div style="font-size:12px"><span class="dot" style="background:${m.color}"></span> ${escapeHtml(m.label)}</div><div class="small">add to this person</div>`;
+      row.appendChild(cb);
+      row.appendChild(txt);
+      grid.appendChild(row);
+      return cb;
+    });
+
+    const row = document.createElement("div");
+    row.className = "btnRow";
+    row.style.marginTop = "10px";
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "primary";
+    addBtn.textContent = "Add suggestions";
+    addBtn.addEventListener("click", () => {
+      const idxs = checks.map((c,i)=>c.checked?i:-1).filter(i=>i>=0);
+      if (!idxs.length){ beep("tick"); return; }
+      applySuggestionsToMembers(suggestions, idxs, tag);
+      beep("bubble");
+      modal.remove();
+    });
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "ghost";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => { beep("tick"); modal.remove(); });
+
+    row.appendChild(addBtn);
+    row.appendChild(cancelBtn);
+
+    modal.appendChild(grid);
+    modal.appendChild(row);
+    floatingBody.appendChild(modal);
+    floatingBody.scrollTop = floatingBody.scrollHeight;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  // -------- Right panel buckets --------
+  function renderBucketsPanel(){
+    const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+    const masks = [...buckets.keys()].sort((a,b)=> bitCount(+b)-bitCount(+a));
+
+    bucketsPanel.innerHTML = "";
+    for (const mask of masks){
+      const keys = buckets.get(mask);
+      const item = document.createElement("div");
+      item.className = "bucketItem";
+
+      const head = document.createElement("div");
+      head.className = "head";
+
+      const left = document.createElement("div");
+      left.innerHTML = `${makeMemberBadge(mask)} <span class="badge">${keys.length} tokens</span> <span class="badge">mask ${mask}</span>`;
+
+      const btn = document.createElement("button");
+      btn.textContent = "Inspect";
+      btn.addEventListener("click", () => {
+        state.selectedRegionMask = mask;
+        state.selectedTokenKey = null;
+        setActiveViewPill("region");
+        beep("tick");
+        renderFloating();
+        requestRender();
+      });
+
+      head.appendChild(left);
+      head.appendChild(btn);
+
+      const toks = document.createElement("div");
+      toks.className = "tokens";
+      for (const k of keys){
+        const disp = tokenMap.get(k).display;
+        const tag = tokenAnyTag.get(k) || null;
+        const chip = document.createElement("div");
+        chip.className = "token";
+        chip.innerHTML = `${tag ? `<span class="tagdot" style="background:${tagColor(tag)}"></span>` : ""}${escapeHtml(disp)}`;
+        chip.addEventListener("click", () => {
+          state.selectedTokenKey = k;
+          state.selectedRegionMask = mask;
+          setActiveViewPill("word");
+          beep("bubble");
+          renderFloating();
+          requestRender();
+        });
+        toks.appendChild(chip);
+      }
+
+      item.appendChild(head);
+      item.appendChild(toks);
+      bucketsPanel.appendChild(item);
+    }
+
+    bucketCountEl.textContent = `${buckets.size} buckets`;
+    tokenCountEl.textContent = `${tokenMap.size} tokens`;
+  }
+
+  // -------- Export / persistence (manual only) --------
+  function getSaveObject(){
+    return {
+      version: 2,
+      members: MEMBERS.map(m => ({ key:m.key, label:m.label, color:m.color })),
+      textByMember: state.textByMember,
+      settings: state.settings,
+      panZoom: { panX: state.panX, panY: state.panY, zoom: state.zoom },
+      ui: {
+        view: state.view,
+        selectedRegionMask: state.selectedRegionMask,
+        selectedTokenKey: state.selectedTokenKey,
+        compareA: state.compareA,
+        compareB: state.compareB
+      }
+    };
+  }
+
+  function saveJSON(){
+    const obj = getSaveObject();
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type:"application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "slopshop_venn_data_v2.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    beep("bubble");
+  }
+
+  function loadJSONFromFile(ev){
+    const f = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const obj = JSON.parse(String(reader.result || "{}"));
+        if (!obj || typeof obj !== "object" || !obj.textByMember) throw new Error("Bad JSON");
+
+        // texts
+        for (const m of MEMBERS){
+          state.textByMember[m.key] = String(obj.textByMember[m.key] || "");
+        }
+
+        // colors (if present)
+        if (Array.isArray(obj.members)){
+          for (const mm of obj.members){
+            const found = MEMBERS.find(x => x.key === mm.key);
+            if (found && mm.color) found.color = String(mm.color);
+          }
+        }
+
+        // settings
+        if (obj.settings){
+          state.settings.bgMode = (obj.settings.bgMode || state.settings.bgMode);
+          state.settings.spacing = clamp(+obj.settings.spacing || state.settings.spacing, 140, 360);
+          state.settings.size = clamp(+obj.settings.size || state.settings.size, 170, 420);
+          state.settings.pull = clamp(+obj.settings.pull || state.settings.pull, 0, 1);
+          state.settings.opacity = clamp(+obj.settings.opacity || state.settings.opacity, 0.05, 0.70);
+          state.settings.textSize = clamp(+obj.settings.textSize || state.settings.textSize, 10, 18);
+        }
+
+        // pan/zoom
+        if (obj.panZoom){
+          state.panX = +obj.panZoom.panX || 0;
+          state.panY = +obj.panZoom.panY || 0;
+          state.zoom = clamp(+obj.panZoom.zoom || 1, 0.35, 2.8);
+        }
+
+        // UI
+        if (obj.ui){
+          state.view = obj.ui.view || state.view;
+          state.selectedRegionMask = obj.ui.selectedRegionMask ?? null;
+          state.selectedTokenKey = obj.ui.selectedTokenKey ?? null;
+          state.compareA = obj.ui.compareA ?? null;
+          state.compareB = obj.ui.compareB ?? null;
+          setActiveViewPill(state.view);
+        }
+
+        rebuildInputs();
+        applySettingsToUI();
+        beep("bubble");
+        statusEl.textContent = "loaded";
+        requestRender();
+      } catch(e){
+        statusEl.textContent = "load failed";
+        beep("tick");
+        alert("Couldn’t load JSON: " + e.message);
+      }
+    };
+    reader.readAsText(f);
+  }
+
+  function downloadPNG(){
+    const rect = stage.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const off = document.createElement("canvas");
+    off.width = Math.floor(rect.width * dpr);
+    off.height = Math.floor(rect.height * dpr);
+    const octx = off.getContext("2d");
+    octx.setTransform(dpr,0,0,dpr,0,0);
+
+    octx.clearRect(0,0,rect.width,rect.height);
+    if (state.settings.bgMode !== "transparent"){
+      const bg = (state.settings.bgMode==="light") ? "#ffffff" : "#0b0d10";
+      octx.fillStyle = bg;
+      octx.fillRect(0,0,rect.width,rect.height);
+    }
+
+    // temporarily swap ctx for render-to-offscreen by reusing render logic lightly
+    octx.save();
+    octx.translate(rect.width/2 + state.panX, rect.height/2 + state.panY);
+    octx.scale(state.zoom, state.zoom);
+
+    const { cx, cy, ellipses } = getEllipses();
+
+    for (const e of ellipses){
+      const col = e.member.color;
+      const op = state.settings.opacity;
+
+      octx.save();
+      octx.translate(e.x, e.y);
+      octx.rotate(e.rot);
+      octx.beginPath();
+      octx.ellipse(0,0,e.a,e.b,0,0,Math.PI*2);
+      octx.fillStyle = hexToRgba(col, op);
+      octx.fill();
+      octx.lineWidth = 1.1;
+      octx.strokeStyle = hexToRgba(col, Math.min(0.55, op*2.8));
+      octx.stroke();
+      octx.restore();
+    }
+
+    octx.save();
+    octx.font = `800 15px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+    octx.fillStyle = (state.settings.bgMode==="light") ? "rgba(12,17,23,.88)" : "rgba(231,237,245,.92)";
+    octx.fillText("Slop Shop", cx, cy);
+    octx.restore();
+
+    octx.save();
+    octx.font = `800 13px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+    for (const e of ellipses){
+      const ang = e.rot;
+      const lx = e.x + Math.cos(ang) * (e.a * 0.86);
+      const ly = e.y + Math.sin(ang) * (e.b * 0.86);
+
+      const text = e.member.label;
+      const tw = octx.measureText(text).width;
+      const padX = 12;
+      const pillW = tw + padX*2 + 14;
+      const pillH = 22;
+
+      roundedRect(octx, lx - pillW/2, ly - pillH/2, pillW, pillH, 999);
+      octx.fillStyle = (state.settings.bgMode==="light") ? "rgba(255,255,255,.72)" : "rgba(0,0,0,.24)";
+      octx.fill();
+      octx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.14)" : "rgba(255,255,255,.12)";
+      octx.lineWidth = 1;
+      octx.stroke();
+
+      octx.beginPath();
+      octx.arc(lx - pillW/2 + 12, ly, 4.6, 0, Math.PI*2);
+      octx.fillStyle = e.member.color;
+      octx.fill();
+      octx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.18)";
+      octx.lineWidth = 1;
+      octx.stroke();
+
+      octx.fillStyle = (state.settings.bgMode==="light") ? "rgba(12,17,23,.88)" : hexToRgba(e.member.color, 0.95);
+      octx.fillText(text, lx + 6, ly);
+    }
+    octx.restore();
+
+    const { tokenMap, buckets, tokenAnyTag } = buildBuckets();
+    const textSize = state.settings.textSize;
+    const placed = [];
+    const padding = 6;
+
+    octx.save();
+    octx.font = `600 ${textSize}px ${getComputedStyle(document.documentElement).getPropertyValue("--mono")}`;
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+
+    const masksSorted = [...buckets.keys()].sort((a,b)=> bitCount(+b) - bitCount(+a));
+    for (const mask of masksSorted){
+      const keys = buckets.get(mask);
+      const base = basePointForMask(mask);
+      let jitter = 0;
+      for (const k of keys){
+        const disp = tokenMap.get(k).display;
+        const seed = hash(disp);
+        const ang = (seed % 6283)/1000;
+        const rad = 10 + (seed % 97);
+        const bx = base.x + Math.cos(ang)*(rad*0.4 + jitter);
+        const by = base.y + Math.sin(ang)*(rad*0.4 + jitter);
+        const p = findPointForMask(mask, bx, by);
+
+        let x = p.x, y = p.y;
+        const wTok = octx.measureText(disp).width;
+        for (let tries=0; tries<30; tries++){
+          const rect2 = { x: x - wTok/2 - padding, y: y - textSize/2 - padding, w: wTok + padding*2, h: textSize + padding*2 };
+          if (!intersectsAny(rect2, placed)){
+            placed.push(rect2);
+            break;
+          }
+          const t = tries*0.8;
+          x += Math.cos(ang+t)*3;
+          y += Math.sin(ang+t)*3;
+        }
+
+        const mix = mixMaskColor(mask);
+        const baseTextColor = (state.settings.bgMode==="light") ? "rgba(12,17,23,.86)" : hexToRgba(mix, 0.92);
+        octx.fillStyle = baseTextColor;
+        octx.fillText(disp, x, y);
+
+        const tag = tokenAnyTag.get(k) || null;
+        if (tag){
+          octx.beginPath();
+          octx.arc(x + wTok/2 + 8, y, 3.6, 0, Math.PI*2);
+          octx.fillStyle = tagColor(tag);
+          octx.fill();
+          octx.strokeStyle = (state.settings.bgMode==="light") ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.18)";
+          octx.lineWidth = 1;
+          octx.stroke();
+        }
+
+        jitter += 2;
+      }
+    }
+    octx.restore();
+
+    octx.restore(); // world
+
+    const url = off.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (state.settings.bgMode==="transparent") ? "slopshop_venn_transparent.png"
+             : (state.settings.bgMode==="light") ? "slopshop_venn_white.png"
+             : "slopshop_venn_dark.png";
+    a.click();
+    beep("bubble");
+  }
+
+  // -------- Sound --------
+  let audioCtx = null;
+  function beep(type="tick", gain=0.18){
+    try{
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = audioCtx.currentTime;
+
+      const o1 = audioCtx.createOscillator();
+      const o2 = audioCtx.createOscillator();
+      const g  = audioCtx.createGain();
+
+      const f1 = type==="bubble" ? 540 : 980;
+      const f2 = type==="bubble" ? 320 : 660;
+
+      o1.type = "sine";
+      o2.type = "triangle";
+
+      o1.frequency.setValueAtTime(f1, t0);
+      o2.frequency.setValueAtTime(f2, t0);
+
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + (type==="bubble" ? 0.14 : 0.07));
+
+      if (type==="bubble"){
+        o1.frequency.exponentialRampToValueAtTime(f1*0.78, t0 + 0.14);
+        o2.frequency.exponentialRampToValueAtTime(f2*0.72, t0 + 0.14);
+      }
+
+      o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+      o1.start(t0); o2.start(t0);
+      o1.stop(t0 + 0.16); o2.stop(t0 + 0.16);
+    } catch {}
+  }
+
+  // -------- Boot --------
+  function boot(){
+    rebuildInputs();
+    applySettingsToUI();
+    resize();
+    renderBucketsPanel();
+    renderFloating();
+    requestRender();
+  }
+  boot();
+
+})();
+</script>
+</body>
+</html>
